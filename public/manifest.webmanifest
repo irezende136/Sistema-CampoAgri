@@ -1,0 +1,17 @@
+{
+  "name": "Sistema CampoAgri",
+  "short_name": "CampoAgri",
+  "description": "Gestão de visitas técnicas, propriedades e relatórios agronômicos",
+  "start_url": "/dashboard",
+  "id": "/dashboard",
+  "display": "standalone",
+  "background_color": "#faf7f0",
+  "theme_color": "#1f4d3a",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
