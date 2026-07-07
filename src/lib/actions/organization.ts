@@ -66,3 +66,15 @@ export async function updateOrganizationAction(
   revalidatePath("/configuracoes");
   return { error: undefined };
 }
+
+export async function updateOrganizationImageAction(field: "logo_url" | "assinatura_url", storagePath: string) {
+  const ctx = await requireOrgContext();
+  if (!canManageOrg(ctx.role)) throw new Error("Você não tem permissão para editar a organização.");
+
+  const supabase = await createClient();
+  const payload = field === "logo_url" ? { logo_url: storagePath } : { assinatura_url: storagePath };
+  const { error } = await supabase.from("organizations").update(payload).eq("id", ctx.organizationId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/configuracoes");
+}

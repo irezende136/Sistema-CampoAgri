@@ -91,7 +91,7 @@ const TIPO_AREA_LABEL: Record<string, string> = {
 };
 
 export function VisitReportDocument({ data, codigo }: { data: VisitReportData; codigo: string }) {
-  const { organization, produtor, propriedade, visita, responsavel, avaliacoes, ocorrencias, recomendacoes, fotos } = data;
+  const { organization, logoUrl, assinaturaUrl, produtor, propriedade, visita, responsavel, avaliacoes, ocorrencias, recomendacoes, fotos } = data;
 
   const ocorrenciasPorArea = new Map<string, typeof ocorrencias>();
   for (const o of ocorrencias) {
@@ -118,7 +118,8 @@ export function VisitReportDocument({ data, codigo }: { data: VisitReportData; c
     >
       <Page size="A4" style={styles.page} wrap>
         <View style={styles.headerBar}>
-          <View>
+          {logoUrl && <Image src={logoUrl} style={{ width: 48, height: 48, marginRight: 10, objectFit: "contain" }} />}
+          <View style={{ flex: 1 }}>
             <Text style={styles.orgName}>{organization?.nome_comercial || organization?.nome}</Text>
             <Text style={styles.orgMeta}>
               {[organization?.telefone, organization?.email].filter(Boolean).join("  ·  ")}
@@ -343,7 +344,8 @@ export function VisitReportDocument({ data, codigo }: { data: VisitReportData; c
         )}
 
         <View style={{ marginTop: 28 }}>
-          <View style={{ borderTopWidth: 1, borderTopColor: COLORS.text, width: 220 }} />
+          {assinaturaUrl && <Image src={assinaturaUrl} style={{ width: 140, height: 50, objectFit: "contain" }} />}
+          <View style={{ borderTopWidth: 1, borderTopColor: COLORS.text, width: 220, marginTop: assinaturaUrl ? 2 : 0 }} />
           <Text style={{ marginTop: 4 }}>{responsavel?.nome ?? "Responsável técnico"}</Text>
           {organization?.registro_profissional && <Text style={{ color: COLORS.muted }}>{organization.registro_profissional}</Text>}
         </View>

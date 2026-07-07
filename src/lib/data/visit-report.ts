@@ -58,8 +58,22 @@ export async function getVisitReportData(organizationId: string, visitaId: strin
     })
   );
 
+  let logoUrl: string | null = null;
+  if (organization?.logo_url) {
+    const { data } = await supabase.storage.from("campoagri").createSignedUrl(organization.logo_url, 3600);
+    logoUrl = data?.signedUrl ?? null;
+  }
+
+  let assinaturaUrl: string | null = null;
+  if (organization?.assinatura_url) {
+    const { data } = await supabase.storage.from("campoagri").createSignedUrl(organization.assinatura_url, 3600);
+    assinaturaUrl = data?.signedUrl ?? null;
+  }
+
   return {
     organization: organization!,
+    logoUrl,
+    assinaturaUrl,
     produtor,
     propriedade,
     visita,
