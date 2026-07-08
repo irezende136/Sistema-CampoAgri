@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileDown, Plus, Trash2 } from "lucide-react";
+import { FileDown, Plus, Trash2, Pencil } from "lucide-react";
 import { requireOrgContext } from "@/lib/auth/context";
 import { createClient } from "@/lib/supabase/server";
+import { canDelete } from "@/lib/auth/permissions";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton, Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DeleteButton } from "@/components/ui/delete-button";
+import { NavigateButtons } from "@/components/propriedades/navigate-buttons";
 import { statusTone, statusLabel } from "@/lib/domain/status-tones";
 import { formatDateBR } from "@/lib/utils/format";
 import { ResumoForm } from "@/components/visitas/resumo-form";
@@ -20,6 +23,7 @@ import {
   removeAvaliacaoAction,
   removeOcorrenciaAction,
   removeRecomendacaoAction,
+  deleteVisitaAction,
 } from "@/lib/actions/visitas";
 
 const CATEGORIA_LABELS: Record<string, string> = {
@@ -41,7 +45,7 @@ export default async function VisitaDetalhePage({ params }: { params: Promise<{ 
 
   const { data: visita } = await supabase
     .from("visitas")
-    .select("*, produtores(id, nome), propriedades(id, nome)")
+    .select("*, produtores(id, nome), propriedades(id, nome, latitude, longitude)")
     .eq("id", id)
     .eq("organization_id", ctx.organizationId)
     .is("deleted_at", null)
@@ -49,7 +53,11 @@ export default async function VisitaDetalhePage({ params }: { params: Promise<{ 
 
   if (!visita) notFound();
   const produtor = (visita as unknown as { produtores: { id: string; nome: string } }).produtores;
-  const propriedade = (visita as unknown as { propriedades: { id: string; nome: string } }).propriedades;
+  const propriedade = (
+    visita as unknown as {
+      propriedades: { id: string; nome: string; latitude: number | null; longitude: number | null };
+    }
+  ).propriedades;
   const readOnly = visita.status !== "rascunho";
 
   const [{ data: avaliacoes }, { data: ocorrencias }, { data: recomendacoes }, { data: fotos }, { data: todasAreas }, { data: relatorio }] =
@@ -97,7 +105,14 @@ export default async function VisitaDetalhePage({ params }: { params: Promise<{ 
         {visita.condicoes_climaticas && (
           <span className="text-sm text-muted-foreground">{visita.condicoes_climaticas}</span>
         )}
+        <NavigateButtons latitude={propriedade.latitude} longitude={propriedade.longitude} />
         <div className="flex-1" />
+        {!readOnly && (
+          <LinkButton href={`/visitas/${id}/editar`} variant="secondary" size="sm">
+            <Pencil size={16} /> Editar
+          </LinkButton>
+        )}
+        {canDelete(ctx.role) && <DeleteButton action={deleteVisitaAction.bind(null, id)} label="Excluir visita" />}
         {visita.status === "rascunho" && <FinalizarButton visitaId={id} />}
         {visita.status !== "rascunho" && (
           <LinkButton href={relatorio ? `/relatorios/${relatorio.id}` : `/visitas/${id}/relatorio`} variant="accent">

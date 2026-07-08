@@ -49,6 +49,35 @@ export async function createVisitaAction(_prev: ActionState, formData: FormData)
   redirect(`/visitas/${data.id}`);
 }
 
+export async function updateVisitaInfoAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
+  const ctx = await requireOrgContext();
+  const data_visita = String(formData.get("data_visita") ?? "").trim();
+  const hora_inicial = String(formData.get("hora_inicial") ?? "").trim() || null;
+  const objetivo = String(formData.get("objetivo") ?? "").trim() || null;
+  const condicoes_climaticas = String(formData.get("condicoes_climaticas") ?? "").trim() || null;
+
+  if (!data_visita) return { error: "Informe a data da visita." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("visitas")
+    .update({
+      data_visita,
+      hora_inicial,
+      objetivo,
+      condicoes_climaticas,
+      updated_by: ctx.userId,
+    })
+    .eq("id", id)
+    .eq("organization_id", ctx.organizationId)
+    .eq("status", "rascunho");
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/visitas/${id}`);
+  redirect(`/visitas/${id}`);
+}
+
 export async function updateVisitaResumoAction(id: string, _prev: ActionState, formData: FormData): Promise<ActionState> {
   const ctx = await requireOrgContext();
   const supabase = await createClient();

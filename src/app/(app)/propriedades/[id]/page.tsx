@@ -12,6 +12,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { Badge } from "@/components/ui/badge";
 import { statusTone, statusLabel } from "@/lib/domain/status-tones";
 import { deletePropriedadeAction } from "@/lib/actions/propriedades";
+import { NavigateButtons } from "@/components/propriedades/navigate-buttons";
 
 const TIPO_AREA_LABELS: Record<string, string> = {
   lavoura: "Lavoura",
@@ -77,6 +78,24 @@ export default async function PropriedadeDetalhePage({ params }: { params: Promi
               />
             )}
           </div>
+        </CardContent>
+        <CardContent className="border-t border-border flex flex-wrap items-center justify-between gap-3">
+          {propriedade.latitude !== null && propriedade.longitude !== null ? (
+            <>
+              <span className="text-sm text-muted-foreground">
+                Coordenadas: {propriedade.latitude}, {propriedade.longitude}
+              </span>
+              <NavigateButtons latitude={propriedade.latitude} longitude={propriedade.longitude} />
+            </>
+          ) : (
+            <span className="text-sm text-muted-foreground">
+              Localização não registrada.{" "}
+              <Link href={`/propriedades/${id}/editar`} className="text-primary font-medium">
+                Adicionar coordenadas
+              </Link>{" "}
+              para navegar por Waze ou Google Maps.
+            </span>
+          )}
         </CardContent>
       </Card>
 

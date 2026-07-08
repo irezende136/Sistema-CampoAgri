@@ -14,6 +14,8 @@ function readPayload(formData: FormData) {
     municipio: String(formData.get("municipio") ?? "").trim() || null,
     estado: String(formData.get("estado") ?? "").trim() || null,
     localizacao: String(formData.get("localizacao") ?? "").trim() || null,
+    latitude: formData.get("latitude") ? Number(formData.get("latitude")) : null,
+    longitude: formData.get("longitude") ? Number(formData.get("longitude")) : null,
     area_total_ha: formData.get("area_total_ha") ? Number(formData.get("area_total_ha")) : null,
     tipo_atividade: String(formData.get("tipo_atividade") ?? "") || null,
     observacoes: String(formData.get("observacoes") ?? "").trim() || null,
