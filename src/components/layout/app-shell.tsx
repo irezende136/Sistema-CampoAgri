@@ -1,11 +1,6 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import {
-  NAV_ITEMS,
-  NAV_ITEMS_SECONDARY,
-  BOTTOM_NAV_ITEMS,
-} from "@/components/layout/nav-items";
-import { SidebarNavLink, BottomNavLink } from "@/components/layout/sidebar-nav";
+import { PrimarySidebarNav, SecondarySidebarNav, BottomNav } from "@/components/layout/nav-lists";
 import { UserMenu } from "@/components/layout/user-menu";
 import type { OrgContext } from "@/lib/auth/context";
 
@@ -16,10 +11,6 @@ export function AppShell({
   ctx: OrgContext;
   children: React.ReactNode;
 }) {
-  const secondaryItems = NAV_ITEMS_SECONDARY.filter(
-    (item) => !item.platformAdminOnly || ctx.isPlatformAdmin
-  );
-
   return (
     <div className="min-h-screen bg-background">
       <div className="flex">
@@ -41,17 +32,8 @@ export function AppShell({
             <Plus size={18} /> Nova visita
           </Link>
 
-          <nav className="mt-6 flex flex-col gap-1">
-            {NAV_ITEMS.map((item) => (
-              <SidebarNavLink key={item.href} item={item} />
-            ))}
-          </nav>
-
-          <div className="mt-6 pt-6 border-t border-border flex flex-col gap-1">
-            {secondaryItems.map((item) => (
-              <SidebarNavLink key={item.href} item={item} />
-            ))}
-          </div>
+          <PrimarySidebarNav />
+          <SecondarySidebarNav isPlatformAdmin={ctx.isPlatformAdmin} />
         </aside>
 
         <div className="flex-1 min-w-0">
@@ -72,11 +54,7 @@ export function AppShell({
         </div>
       </div>
 
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch border-t border-border bg-card/95 backdrop-blur">
-        {BOTTOM_NAV_ITEMS.map((item) => (
-          <BottomNavLink key={item.href} item={item} />
-        ))}
-      </nav>
+      <BottomNav />
 
       <Link
         href="/visitas/nova"
