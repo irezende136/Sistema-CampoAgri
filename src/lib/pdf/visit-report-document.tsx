@@ -3,7 +3,6 @@ import type { VisitReportData } from "@/lib/data/visit-report";
 import { formatDateBR, formatDateTimeBR } from "@/lib/utils/format";
 
 const COLORS = {
-  primary: "#1f4d3a",
   accent: "#c88a2e",
   text: "#1f2421",
   muted: "#6b6459",
@@ -11,72 +10,74 @@ const COLORS = {
   bg: "#faf7f0",
 };
 
-const styles = StyleSheet.create({
-  page: {
-    padding: 32,
-    fontSize: 10,
-    color: COLORS.text,
-    fontFamily: "Helvetica",
-  },
-  headerBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: COLORS.primary,
-    paddingBottom: 10,
-    marginBottom: 14,
-  },
-  orgName: { fontSize: 16, fontFamily: "Helvetica-Bold", color: COLORS.primary },
-  orgMeta: { fontSize: 8, color: COLORS.muted, marginTop: 2 },
-  reportTitle: { fontSize: 9, color: COLORS.muted, textAlign: "right" },
-  sectionTitle: {
-    fontSize: 11,
-    fontFamily: "Helvetica-Bold",
-    color: COLORS.primary,
-    marginTop: 14,
-    marginBottom: 6,
-    textTransform: "uppercase",
-  },
-  card: {
-    backgroundColor: COLORS.bg,
-    borderRadius: 4,
-    padding: 10,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  row: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
-  label: { fontFamily: "Helvetica-Bold" },
-  infoGrid: { flexDirection: "row", flexWrap: "wrap" },
-  infoItem: { width: "50%", marginBottom: 4 },
-  badge: {
-    fontSize: 8,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 8,
-    backgroundColor: "#eee",
-    marginLeft: 4,
-  },
-  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 },
-  photoBox: { width: 130 },
-  photo: { width: 130, height: 100, objectFit: "cover", borderRadius: 3 },
-  photoCaption: { fontSize: 7.5, color: COLORS.muted, marginTop: 2 },
-  footer: {
-    position: "absolute",
-    bottom: 24,
-    left: 32,
-    right: 32,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingTop: 8,
-    fontSize: 8,
-    color: COLORS.muted,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  pageNumber: { position: "absolute", bottom: 24, right: 32, fontSize: 8, color: COLORS.muted },
-});
+function createStyles(primary: string) {
+  return StyleSheet.create({
+    page: {
+      padding: 32,
+      fontSize: 10,
+      color: COLORS.text,
+      fontFamily: "Helvetica",
+    },
+    headerBar: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderBottomWidth: 2,
+      borderBottomColor: primary,
+      paddingBottom: 10,
+      marginBottom: 14,
+    },
+    orgName: { fontSize: 16, fontFamily: "Helvetica-Bold", color: primary },
+    orgMeta: { fontSize: 8, color: COLORS.muted, marginTop: 2 },
+    reportTitle: { fontSize: 9, color: COLORS.muted, textAlign: "right" },
+    sectionTitle: {
+      fontSize: 11,
+      fontFamily: "Helvetica-Bold",
+      color: primary,
+      marginTop: 14,
+      marginBottom: 6,
+      textTransform: "uppercase",
+    },
+    card: {
+      backgroundColor: COLORS.bg,
+      borderRadius: 4,
+      padding: 10,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
+    row: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+    label: { fontFamily: "Helvetica-Bold" },
+    infoGrid: { flexDirection: "row", flexWrap: "wrap" },
+    infoItem: { width: "50%", marginBottom: 4 },
+    badge: {
+      fontSize: 8,
+      paddingHorizontal: 5,
+      paddingVertical: 2,
+      borderRadius: 8,
+      backgroundColor: "#eee",
+      marginLeft: 4,
+    },
+    photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 },
+    photoBox: { width: 130 },
+    photo: { width: 130, height: 100, objectFit: "cover", borderRadius: 3 },
+    photoCaption: { fontSize: 7.5, color: COLORS.muted, marginTop: 2 },
+    footer: {
+      position: "absolute",
+      bottom: 24,
+      left: 32,
+      right: 32,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.border,
+      paddingTop: 8,
+      fontSize: 8,
+      color: COLORS.muted,
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    pageNumber: { position: "absolute", bottom: 24, right: 32, fontSize: 8, color: COLORS.muted },
+  });
+}
 
 const SEVERIDADE_LABEL: Record<string, string> = { baixa: "Baixa", media: "Média", alta: "Alta", critica: "Crítica" };
 const PRIORIDADE_LABEL: Record<string, string> = { baixa: "Baixa", media: "Média", alta: "Alta", urgente: "Urgente" };
@@ -92,6 +93,7 @@ const TIPO_AREA_LABEL: Record<string, string> = {
 
 export function VisitReportDocument({ data, codigo }: { data: VisitReportData; codigo: string }) {
   const { organization, logoUrl, assinaturaUrl, produtor, propriedade, visita, responsavel, avaliacoes, ocorrencias, recomendacoes, fotos } = data;
+  const styles = createStyles(organization?.cor_primaria || "#1f4d3a");
 
   const ocorrenciasPorArea = new Map<string, typeof ocorrencias>();
   for (const o of ocorrencias) {

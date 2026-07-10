@@ -2,23 +2,32 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { PrimarySidebarNav, SecondarySidebarNav, BottomNav } from "@/components/layout/nav-lists";
 import { UserMenu } from "@/components/layout/user-menu";
+import { OrgMark } from "@/components/layout/org-mark";
+import { darkenHex, readableTextColor } from "@/lib/utils/color";
 import type { OrgContext } from "@/lib/auth/context";
 
 export function AppShell({
   ctx,
+  logoUrl,
   children,
 }: {
   ctx: OrgContext;
+  logoUrl: string | null;
   children: React.ReactNode;
 }) {
+  const cor = ctx.organization?.cor_primaria || "#1f4d3a";
+  const themeStyle = {
+    "--primary": cor,
+    "--primary-dark": darkenHex(cor, 0.18),
+    "--primary-foreground": readableTextColor(cor),
+  } as React.CSSProperties;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={themeStyle}>
       <div className="flex">
         <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 border-r border-border h-screen sticky top-0 p-4">
           <div className="flex items-center gap-2 px-2 py-3">
-            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-              CA
-            </div>
+            <OrgMark logoUrl={logoUrl} />
             <div className="min-w-0">
               <div className="font-semibold text-sm truncate">{ctx.organization?.nome ?? "CampoAgri"}</div>
               <div className="text-xs text-muted-foreground">Sistema CampoAgri</div>
@@ -39,9 +48,7 @@ export function AppShell({
         <div className="flex-1 min-w-0">
           <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-border bg-background/95 backdrop-blur px-4 py-3 lg:px-6">
             <div className="lg:hidden flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs">
-                CA
-              </div>
+              <OrgMark logoUrl={logoUrl} size={32} />
               <span className="font-semibold text-sm truncate max-w-[160px]">
                 {ctx.organization?.nome ?? "CampoAgri"}
               </span>

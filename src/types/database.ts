@@ -651,6 +651,7 @@ export type Database = {
         Row: {
           assinatura_url: string | null
           cidade: string | null
+          cor_primaria: string
           created_at: string
           data_fim_trial: string | null
           data_inicio_trial: string | null
@@ -675,6 +676,7 @@ export type Database = {
         Insert: {
           assinatura_url?: string | null
           cidade?: string | null
+          cor_primaria?: string
           created_at?: string
           data_fim_trial?: string | null
           data_inicio_trial?: string | null
@@ -699,6 +701,7 @@ export type Database = {
         Update: {
           assinatura_url?: string | null
           cidade?: string | null
+          cor_primaria?: string
           created_at?: string
           data_fim_trial?: string | null
           data_inicio_trial?: string | null

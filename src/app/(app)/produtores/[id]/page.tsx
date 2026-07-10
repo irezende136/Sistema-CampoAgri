@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkButton } from "@/components/ui/button";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { WhatsAppButton } from "@/components/produtores/whatsapp-button";
 import { deleteProdutorAction } from "@/lib/actions/produtores";
 
 export default async function ProdutorDetalhePage({ params }: { params: Promise<{ id: string }> }) {
@@ -62,6 +63,10 @@ export default async function ProdutorDetalhePage({ params }: { params: Promise<
             )}
           </div>
           <div className="flex items-center gap-2">
+            <WhatsAppButton
+              phone={produtor.whatsapp || produtor.telefone}
+              message={`Olá ${produtor.nome.split(" ")[0]}, tudo bem?`}
+            />
             <LinkButton href={`/produtores/${id}/editar`} variant="secondary" size="sm">
               <Pencil size={16} /> Editar
             </LinkButton>

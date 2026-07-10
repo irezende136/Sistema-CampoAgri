@@ -45,6 +45,9 @@ export async function updateOrganizationAction(
   const ctx = await requireOrgContext();
   if (!canManageOrg(ctx.role)) return { error: "Você não tem permissão para editar a organização." };
 
+  const corPrimaria = String(formData.get("cor_primaria") ?? "").trim();
+  if (!/^#[0-9a-fA-F]{6}$/.test(corPrimaria)) return { error: "Cor inválida." };
+
   const supabase = await createClient();
   const payload = {
     nome: String(formData.get("nome") ?? "").trim(),
@@ -54,6 +57,7 @@ export async function updateOrganizationAction(
     cidade: String(formData.get("cidade") ?? "").trim() || null,
     estado: String(formData.get("estado") ?? "").trim() || null,
     registro_profissional: String(formData.get("registro_profissional") ?? "").trim() || null,
+    cor_primaria: corPrimaria.toLowerCase(),
   };
 
   const { error } = await supabase
