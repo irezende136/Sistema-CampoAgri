@@ -926,6 +926,8 @@ export type Database = {
           nome: string | null
           status: string
           telefone: string | null
+          termos_aceitos_em: string | null
+          termos_versao: string | null
           ultimo_acesso: string | null
           updated_at: string
         }
@@ -937,6 +939,8 @@ export type Database = {
           nome?: string | null
           status?: string
           telefone?: string | null
+          termos_aceitos_em?: string | null
+          termos_versao?: string | null
           ultimo_acesso?: string | null
           updated_at?: string
         }
@@ -948,6 +952,8 @@ export type Database = {
           nome?: string | null
           status?: string
           telefone?: string | null
+          termos_aceitos_em?: string | null
+          termos_versao?: string | null
           ultimo_acesso?: string | null
           updated_at?: string
         }

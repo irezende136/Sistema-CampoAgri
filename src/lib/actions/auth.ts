@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { CURRENT_TERMS_VERSION } from "@/lib/legal/constants";
 
 export type ActionState = { error?: string } | undefined;
 
@@ -26,9 +27,11 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
   const nome = String(formData.get("nome") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const termosAceitos = formData.get("termos") === "on";
 
   if (!nome || !email || !password) return { error: "Preencha todos os campos." };
   if (password.length < 8) return { error: "A senha deve ter ao menos 8 caracteres." };
+  if (!termosAceitos) return { error: "É necessário aceitar os Termos de Uso e a Política de Privacidade." };
 
   const supabase = await createClient();
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -37,7 +40,11 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
     email,
     password,
     options: {
-      data: { nome },
+      data: {
+        nome,
+        termos_aceitos_em: new Date().toISOString(),
+        termos_versao: CURRENT_TERMS_VERSION,
+      },
       emailRedirectTo: `${origin}/auth/callback`,
     },
   });

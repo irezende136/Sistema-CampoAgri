@@ -43,6 +43,16 @@ export function AppShell({
 
           <PrimarySidebarNav />
           <SecondarySidebarNav isPlatformAdmin={ctx.isPlatformAdmin} />
+
+          <div className="mt-auto pt-4 text-xs text-muted-foreground">
+            <Link href="/termos" className="hover:text-foreground">
+              Termos
+            </Link>{" "}
+            ·{" "}
+            <Link href="/privacidade" className="hover:text-foreground">
+              Privacidade
+            </Link>
+          </div>
         </aside>
 
         <div className="flex-1 min-w-0">

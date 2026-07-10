@@ -23,6 +23,22 @@ export function SignupForm() {
           <FieldGroup label="Senha" htmlFor="password" hint="Mínimo de 8 caracteres">
             <Input id="password" name="password" type="password" required autoComplete="new-password" placeholder="••••••••" />
           </FieldGroup>
+
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="termos" required className="mt-0.5 h-4 w-4 rounded border-border" />
+            <span>
+              Li e concordo com os{" "}
+              <Link href="/termos" target="_blank" className="text-primary font-medium">
+                Termos de Uso
+              </Link>{" "}
+              e a{" "}
+              <Link href="/privacidade" target="_blank" className="text-primary font-medium">
+                Política de Privacidade
+              </Link>
+              .
+            </span>
+          </label>
+
           {state?.error && <p className="text-sm text-danger">{state.error}</p>}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Criando conta..." : "Criar conta"}

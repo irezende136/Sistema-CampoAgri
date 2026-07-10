@@ -1,0 +1,2 @@
+export const CURRENT_TERMS_VERSION = "2026-07-08";
+export const TERMS_UPDATED_AT = "08/07/2026";

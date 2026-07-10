@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { CURRENT_TERMS_VERSION } from "@/lib/legal/constants";
 import type { Database } from "@/types/database";
 
 export type OrgRole = Database["public"]["Tables"]["organization_users"]["Row"]["role"];
@@ -62,8 +63,33 @@ export async function getOrgContext(): Promise<OrgContext | null> {
   };
 }
 
+/**
+ * Redireciona para /termos/aceitar se o usuário logado ainda não aceitou a
+ * versão vigente dos Termos de Uso / Política de Privacidade (LGPD/CDC).
+ * Deve ser chamada antes de liberar acesso a qualquer área autenticada.
+ */
+export async function requireTermsAccepted(redirectTo?: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("termos_aceitos_em, termos_versao")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile?.termos_aceitos_em || profile.termos_versao !== CURRENT_TERMS_VERSION) {
+    const suffix = redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : "";
+    redirect(`/termos/aceitar${suffix}`);
+  }
+}
+
 /** Usa em Server Components/Actions que exigem organização ativa. */
 export async function requireOrgContext(): Promise<OrgContext> {
+  await requireTermsAccepted();
   const ctx = await getOrgContext();
   if (!ctx) redirect("/login");
   if (!ctx.organizationId) redirect("/onboarding");
