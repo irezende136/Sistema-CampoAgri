@@ -36,11 +36,11 @@ Legenda de status: ✅ Concluído e verificado em código+banco · 🟡 Parcial/
 | Visitas (excluir) | ✅ | ação de exclusão em `src/lib/actions/visitas.ts` **[CÓDIGO]** |
 | Avaliação de área dentro da visita | ✅ | `src/app/(app)/visitas/[id]/areas/[avaliacaoId]`, tabela `avaliacoes_area` **[CÓDIGO+BANCO]** |
 | Ocorrências agronômicas — criar | ✅ | `src/app/(app)/visitas/[id]/ocorrencias/nova`, tabela `ocorrencias` **[CÓDIGO+BANCO]** |
-| Ocorrências agronômicas — editar | ❌ | Não existe página/rota de edição, apenas criação e exclusão. Confirmado por varredura de `src/app/(app)/visitas` — não há `ocorrencias/[id]/editar`. **[CÓDIGO]** |
+| Ocorrências agronômicas — editar | ✅ | **Implementado em 2026-07-11**: `src/app/(app)/visitas/[id]/ocorrencias/[ocorrenciaId]/editar/page.tsx` + `updateOcorrenciaAction` em `src/lib/actions/visitas.ts`. Só disponível enquanto a visita está em `rascunho` (mesma regra já aplicada a criação/exclusão). **[CÓDIGO]** |
 | Recomendações técnicas — criar | ✅ | `src/app/(app)/visitas/[id]/recomendacoes/nova`, tabela `recomendacoes` **[CÓDIGO+BANCO]** |
-| Recomendações técnicas — editar | ❌ | Mesma situação das ocorrências: só criação e exclusão. **[CÓDIGO]** |
+| Recomendações técnicas — editar | ✅ | **Implementado em 2026-07-11**: `src/app/(app)/visitas/[id]/recomendacoes/[recomendacaoId]/editar/page.tsx` + `updateRecomendacaoAction`. Mesma regra de `rascunho`. **[CÓDIGO]** |
 | Fotos (upload, galeria) | ✅ | `src/lib/actions/fotos.ts`, tabela `fotos`, bucket Storage `campoagri` (ver seção 5) **[CÓDIGO+BANCO]** |
-| Insumos/custos por visita | ⚠️ | Tabela `insumos_custos` existe no schema (`0001_schema.sql`), com **0 linhas** no banco, e **nenhuma referência em `src/`** fora dos tipos gerados automaticamente. Não há formulário, listagem ou ação para essa entidade. **[CÓDIGO+BANCO]** |
+| Insumos/custos por safra | ✅ | **Implementado em 2026-07-11**: seção "Insumos e custos" na página de detalhe da safra (`src/app/(app)/safras/[id]/page.tsx`), formulário `src/components/safras/insumo-form.tsx`, ações `createInsumoAction`/`deleteInsumoAction` em `src/lib/actions/insumos.ts`. Calcula `custo_ha` (quantidade × preço unitário) e `custo_total` (custo_ha × área da área vinculada) automaticamente; exibe total acumulado da safra. Reaproveita as políticas RLS já existentes desde `0003_rls.sql` (`insumos_select/insert/update/delete`), sem migration nova. **[CÓDIGO+BANCO]** |
 | Relatório de visita em PDF | ✅ | `src/lib/pdf/visit-report-document.tsx` (`@react-pdf/renderer`), rota `src/app/(app)/visitas/[id]/relatorio/route.tsx`, dados via `src/lib/data/visit-report.ts` **[CÓDIGO]** |
 | Agenda de visitas | ✅ | `src/app/(app)/agenda`, tabela `agenda_visitas` **[CÓDIGO+BANCO]** |
 | Dashboard com KPIs | ✅ | `src/app/(app)/dashboard`, `src/lib/data/dashboard.ts` **[CÓDIGO]** |
@@ -150,6 +150,7 @@ Projeto Supabase remoto `ynspkydroyncqhswjznm`. 9 migrations aplicadas, **sem dr
 | `0007_team_invite_helper.sql` | Função `find_user_by_email` (convite de membros por e-mail) |
 | `0008_organization_theme_color.sql` | Adiciona `organizations.cor_primaria text not null default '#1f4d3a'` com `CHECK (cor_primaria ~ '^#[0-9a-f]{6}$')` |
 | `0009_terms_acceptance.sql` | Adiciona `profiles.termos_aceitos_em timestamptz`, `profiles.termos_versao text`; reescreve `handle_new_user()` para copiar esses campos de `raw_user_meta_data` |
+| `0010_rls_initplan_fix.sql` | Recria `org_users_select`, `profiles_insert_self`, `profiles_update_self`, `profiles_select_self_or_org` trocando `auth.uid()` por `(select auth.uid())` (corrige advisory `auth_rls_initplan`) |
 
 ### 5.2 Modelo de dados — pontos-chave
 
@@ -184,7 +185,7 @@ Confirmadas em código/banco **[CÓDIGO+BANCO]**, salvo indicação contrária:
 - O último `owner` ativo de uma organização não pode ser removido nem ter seu papel rebaixado (`protect_last_owner`), evitando organizações órfãs sem administrador.
 - Papéis (`owner/admin/agronomo/tecnico/assistente/viewer`) controlam permissões de escrita via `can_write_org`/`is_org_admin`, consumidos tanto em RLS quanto em `src/lib/auth/permissions.ts` no lado da aplicação.
 - Todo cadastro de usuário exige aceite dos Termos de Uso e da Política de Privacidade; a versão aceita e o timestamp são gravados em `profiles.termos_versao`/`termos_aceitos_em`, seja no cadastro (via metadata copiada pelo trigger `handle_new_user`) ou depois, via `/termos/aceitar` para usuários já existentes cuja versão ficou desatualizada.
-  - **Observação sobre cobertura do gate**: o middleware (`src/lib/supabase/middleware.ts`) hoje só controla acesso autenticado vs público (`PUBLIC_PATHS`); a página `termos/aceitar` existe e a Server Action `acceptTermsAction` grava a aceitação, mas **não confirmei nesta análise, lendo o middleware, um redirecionamento forçado para `/termos/aceitar` quando `termos_versao` está desatualizada** — isso precisa ser verificado por quem assumir o projeto antes de considerar o gate de conformidade LGPD como bloqueio garantido em todas as rotas. Ver seção 12.
+  - **Cobertura do gate — auditada e confirmada em 2026-07-11**: o enforcement não está no middleware, e sim em `requireTermsAccepted()` (`src/lib/auth/context.ts`), chamada dentro de `requireOrgContext()`. Essa função é invocada por: (1) `src/app/(app)/layout.tsx`, o layout compartilhado por **todas** as rotas do grupo `(app)` — incluindo `super-admin/*`, já que essas páginas também estão aninhadas em `(app)`; (2) `src/app/(auth)/onboarding/page.tsx`, diretamente; (3) praticamente todas as Server Actions em `src/lib/actions/*.ts` (confirmado por contagem de chamadas vs. funções exportadas em cada arquivo); (4) o único outro route handler autenticado, `visitas/[id]/relatorio/route.tsx`. `acceptTermsAction` (em `legal.ts`) e as ações de `auth.ts` são intencionalmente as únicas exceções, pois precisam funcionar antes do aceite existir. **Gap residual (corrigido em 2026-07-11)**: as duas Server Actions de `src/lib/actions/platform.ts` (`updateOrgStatusAction`, `updateOrgPlanAction`) chamavam apenas `requirePlatformAdmin()`, sem `requireTermsAccepted()`. Corrigido adicionando `await requireTermsAccepted();` no início de ambas as funções.
 - Relatórios de visita em PDF são gerados sob demanda (`route.tsx` em `visitas/[id]/relatorio`), a partir de dados carregados em `src/lib/data/visit-report.ts`.
 - **Regra sobre certificados/comprovantes — não aplicável a este projeto**: o sistema não possui nenhum módulo veterinário, de vacinação ou de laudo sanitário. Não existe, portanto, nenhum documento no sistema que precise da ressalva de que um certificado comprova apenas aplicação/registro (e não exame clínico ou ausência de doença) — essa regra genérica não se aplica a nenhuma funcionalidade real deste código e não deve ser inventada ou adicionada especulativamente.
 
@@ -244,12 +245,12 @@ Ver tabela completa na seção 2. Resumo dos módulos com implementação de pon
 Por instrução explícita, **nada nesta seção foi corrigido** — apenas identificado e registrado.
 
 1. **`auth_leaked_password_protection` desabilitado** nas configurações de Auth do Supabase (advisory de segurança, nível WARN). Recomenda-se habilitar.
-2. **Políticas RLS com re-avaliação por linha**: em `profiles` e `organization_users` (políticas `profiles_select_self_or_org`, `profiles_update_self`, `profiles_insert_self`, `org_users_select`), as chamadas a `auth.<função>()` são feitas diretamente em vez de `(select auth.<função>())`, o que causa reavaliação da função a cada linha (advisory de performance, lint `auth_rls_initplan`). Impacto cresce com o volume de dados.
+2. ~~Políticas RLS com re-avaliação por linha~~ — **Corrigido em 2026-07-11** via `supabase/migrations/0010_rls_initplan_fix.sql`: as 4 políticas (`profiles_select_self_or_org`, `profiles_update_self`, `profiles_insert_self`, `org_users_select`) foram recriadas trocando `auth.uid()` por `(select auth.uid())`. Confirmado via `get_advisors(type=performance)` que o lint `auth_rls_initplan` não aparece mais nos resultados.
 3. **Chaves estrangeiras sem índice** em praticamente todas as tabelas (advisories de performance, nível INFO) — baixo risco no volume atual, mas relevante ao escalar.
 4. **Índices não utilizados** em algumas tabelas (INFO) — esperado no volume atual, não urgente.
-5. **Gate de aceite de termos possivelmente incompleto**: não há confirmação, nesta análise, de que o middleware força redirecionamento para `/termos/aceitar` quando a versão aceita está desatualizada para usuários já logados — a página e a Server Action existem, mas o "enforcement" automático em todas as rotas autenticadas não foi verificado no código do middleware (ver seção 6). Precisa ser auditado antes de considerar a conformidade LGPD "garantida" em 100% dos fluxos.
-6. **`insumos_custos` sem UI**: tabela existe, vazia, sem nenhuma tela, ação ou referência de aplicação.
-7. **Sem edição de ocorrências/recomendações**: apenas criação e exclusão; para corrigir um registro após salvo, o usuário precisa excluir e recriar.
+5. ~~Gate de aceite de termos possivelmente incompleto~~ — **Auditado e corrigido em 2026-07-11**: o gate é de fato enforced por `requireTermsAccepted()`/`requireOrgContext()` em todas as páginas `(app)` e na quase totalidade das Server Actions. O único gap real encontrado (`platform.ts`) foi corrigido. Ver seção 6.
+6. ~~`insumos_custos` sem UI~~ — **Implementado em 2026-07-11** (ver seção 2/9). Decisão tomada com o usuário: construir UI mínima em vez de remover a tabela.
+7. ~~Sem edição de ocorrências/recomendações~~ — **Implementado em 2026-07-11** (ver seção 2/9).
 8. **Dependências mortas no `package.json`**: `react-hook-form`, `zod`, `clsx`, `date-fns`, `@hookform/resolvers` instaladas sem nenhum import em `src/`.
 9. **`manifest.webmanifest` com `theme_color` estático** (`#1f4d3a`), não reflete a cor dinâmica por organização introduzida depois.
 10. **Sem forma automatizada de rodar o seed**: `supabase/seed/seed.sql` não está integrado a nenhum script npm nem a configuração de CLI do Supabase local; foi executado manualmente via MCP (`execute_sql`).
@@ -262,27 +263,25 @@ Por instrução explícita, **nada nesta seção foi corrigido** — apenas iden
 
 ## 13. Estado atual exato
 
-- **Último commit**: `f6dbc86` — "Add aceite de Termos de Uso e Politica de Privacidade (LGPD/CDC)"
 - **Branch**: `claude/agronomy-saas-platform-fpxpei`
-- **Árvore de trabalho**: limpa, sem alterações pendentes (`git status` vazio) no momento da criação deste documento
 - **Deploy de produção**: ativo na Vercel, alias estável (não usar URLs de deploy com hash específico como referência permanente)
-- **Banco de produção**: projeto Supabase `ynspkydroyncqhswjznm`, 9 migrations aplicadas sem drift, 2 organizações reais com dados (uma semeada/demo, uma real de usuário final)
-- **Nenhum arquivo funcional foi alterado durante a criação deste documento** — apenas leitura de código, consultas SQL somente-leitura e consultas de advisors/logs via MCP.
+- **Banco de produção**: projeto Supabase `ynspkydroyncqhswjznm`, 10 migrations aplicadas sem drift (`0010_rls_initplan_fix.sql` adicionada em 2026-07-11), 2 organizações reais com dados (uma semeada/demo, uma real de usuário final)
+- **Atualização de 2026-07-11**: nesta rodada, 4 dos 5 itens de dívida priorizados (seção 14) foram executados: auditoria/correção do gate de termos, correção das 4 políticas RLS `auth_rls_initplan`, implementação de UI para `insumos_custos`, e implementação de edição de ocorrências/recomendações. O único item não concluído é habilitar `auth_leaked_password_protection`, que exige acesso ao Dashboard do Supabase (não há ferramenta MCP para alterar configuração de Auth) — ação pendente do usuário.
 
 ---
 
 ## 14. Próximos passos priorizados
 
 **P0 — Crítico / bloqueante de conformidade ou segurança**
-1. Auditar e, se necessário, corrigir o enforcement do gate de aceite de termos no middleware para todas as rotas autenticadas (item 12.5).
+1. ~~Auditar e corrigir o enforcement do gate de aceite de termos~~ — concluído em 2026-07-11 (item 12.5).
 2. Habilitar `auth_leaked_password_protection` no Supabase Auth (item 12.1).
 
 **P1 — Alto impacto, baixo risco**
-3. Corrigir as 4 políticas RLS com `auth_rls_initplan` em `profiles`/`organization_users`, trocando `auth.fn()` por `(select auth.fn())` (item 12.2).
-4. Decidir o destino de `insumos_custos`: implementar UI mínima ou remover a tabela do schema, para não deixar uma entidade "fantasma" (item 12.6).
+3. ~~Corrigir as 4 políticas RLS com `auth_rls_initplan`~~ — concluído em 2026-07-11 (item 12.2).
+4. ~~Decidir o destino de `insumos_custos`~~ — concluído em 2026-07-11: UI mínima implementada (item 12.6).
 
 **P2 — Melhoria funcional esperada pelo usuário**
-5. Implementar edição de ocorrências e recomendações (hoje só criar/excluir) (item 12.7).
+5. ~~Implementar edição de ocorrências e recomendações~~ — concluído em 2026-07-11 (item 12.7).
 6. Atualizar `manifest.webmanifest` para refletir a cor dinâmica da organização, ou documentar que o `theme_color` é intencionalmente fixo (item 12.9).
 
 **P3 — Limpeza técnica / dívida menor**

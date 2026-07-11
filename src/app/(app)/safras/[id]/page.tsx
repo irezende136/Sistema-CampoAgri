@@ -10,8 +10,23 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { Badge } from "@/components/ui/badge";
 import { statusTone, statusLabel } from "@/lib/domain/status-tones";
 import { deleteSafraAction, upsertPlanejamentoAction } from "@/lib/actions/safras";
+import { createInsumoAction, deleteInsumoAction } from "@/lib/actions/insumos";
 import { PlanejamentoForm } from "@/components/safras/planejamento-form";
-import { formatDateBR } from "@/lib/utils/format";
+import { InsumoForm } from "@/components/safras/insumo-form";
+import { formatDateBR, formatCurrencyBRL } from "@/lib/utils/format";
+
+const TIPO_INSUMO_LABELS: Record<string, string> = {
+  semente: "Semente",
+  fertilizante: "Fertilizante",
+  herbicida: "Herbicida",
+  inseticida: "Inseticida",
+  fungicida: "Fungicida",
+  corretivo: "Corretivo",
+  diesel: "Diesel",
+  servico: "Serviço",
+  mao_de_obra: "Mão de obra",
+  outro: "Outro",
+};
 
 export default async function SafraDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,6 +50,15 @@ export default async function SafraDetalhePage({ params }: { params: Promise<{ i
     .eq("safra_id", id)
     .is("deleted_at", null)
     .maybeSingle();
+
+  const { data: insumos } = await supabase
+    .from("insumos_custos")
+    .select("*")
+    .eq("safra_id", id)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
+
+  const custoTotalSafra = (insumos ?? []).reduce((sum, i) => sum + (i.custo_total ?? 0), 0);
 
   return (
     <div>
@@ -68,6 +92,54 @@ export default async function SafraDetalhePage({ params }: { params: Promise<{ i
             planejamento={planejamento}
             action={upsertPlanejamentoAction.bind(null, id, safra.area_id)}
           />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-5">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Insumos e custos</CardTitle>
+          {insumos && insumos.length > 0 && (
+            <span className="text-sm font-semibold">Total: {formatCurrencyBRL(custoTotalSafra)}</span>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!insumos || insumos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum insumo ou custo registrado para esta safra.</p>
+          ) : (
+            <div className="space-y-2">
+              {insumos.map((i) => (
+                <div
+                  key={i.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm"
+                >
+                  <div>
+                    <div className="font-medium">
+                      {i.nome_insumo}{" "}
+                      <span className="text-xs text-muted-foreground font-normal">
+                        ({TIPO_INSUMO_LABELS[i.tipo_insumo] ?? i.tipo_insumo})
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {i.quantidade_ha ? `${i.quantidade_ha} ${i.unidade ?? ""}/ha` : null}
+                      {i.preco_unitario ? ` · ${formatCurrencyBRL(i.preco_unitario)}/${i.unidade ?? "un"}` : null}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold">{formatCurrencyBRL(i.custo_total)}</span>
+                    {canDelete(ctx.role) && (
+                      <DeleteButton
+                        action={deleteInsumoAction.bind(null, i.id, id)}
+                        label="Excluir"
+                        confirmMessage="Remover este insumo/custo?"
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <InsumoForm action={createInsumoAction.bind(null, id, safra.area_id, safra.propriedade_id)} />
         </CardContent>
       </Card>
     </div>

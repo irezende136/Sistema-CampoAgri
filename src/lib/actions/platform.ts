@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requirePlatformAdmin } from "@/lib/auth/context";
+import { requirePlatformAdmin, requireTermsAccepted } from "@/lib/auth/context";
 
 export async function updateOrgStatusAction(organizationId: string, status: string) {
+  await requireTermsAccepted();
   await requirePlatformAdmin();
   const supabase = await createClient();
 
@@ -28,6 +29,7 @@ export async function updateOrgStatusAction(organizationId: string, status: stri
 }
 
 export async function updateOrgPlanAction(organizationId: string, plano: string) {
+  await requireTermsAccepted();
   await requirePlatformAdmin();
   const supabase = await createClient();
 
