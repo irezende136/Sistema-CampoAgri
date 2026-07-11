@@ -200,11 +200,19 @@ export default async function VisitaDetalhePage({ params }: { params: Promise<{ 
                     </div>
                   </div>
                   {!readOnly && (
-                    <form action={removeOcorrenciaAction.bind(null, o.id, id)}>
-                      <button type="submit" className="text-muted-foreground hover:text-danger p-1 shrink-0">
-                        <Trash2 size={16} />
-                      </button>
-                    </form>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Link
+                        href={`/visitas/${id}/ocorrencias/${o.id}/editar`}
+                        className="text-muted-foreground hover:text-foreground p-1"
+                      >
+                        <Pencil size={16} />
+                      </Link>
+                      <form action={removeOcorrenciaAction.bind(null, o.id, id)}>
+                        <button type="submit" className="text-muted-foreground hover:text-danger p-1">
+                          <Trash2 size={16} />
+                        </button>
+                      </form>
+                    </div>
                   )}
                 </div>
               ))}
@@ -241,11 +249,19 @@ export default async function VisitaDetalhePage({ params }: { params: Promise<{ 
                     </div>
                   </div>
                   {!readOnly && (
-                    <form action={removeRecomendacaoAction.bind(null, r.id, id)}>
-                      <button type="submit" className="text-muted-foreground hover:text-danger p-1 shrink-0">
-                        <Trash2 size={16} />
-                      </button>
-                    </form>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Link
+                        href={`/visitas/${id}/recomendacoes/${r.id}/editar`}
+                        className="text-muted-foreground hover:text-foreground p-1"
+                      >
+                        <Pencil size={16} />
+                      </Link>
+                      <form action={removeRecomendacaoAction.bind(null, r.id, id)}>
+                        <button type="submit" className="text-muted-foreground hover:text-danger p-1">
+                          <Trash2 size={16} />
+                        </button>
+                      </form>
+                    </div>
                   )}
                 </div>
               ))}

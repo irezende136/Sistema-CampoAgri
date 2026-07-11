@@ -286,6 +286,54 @@ export async function createOcorrenciaAction(
   redirect(`/visitas/${visitaId}`);
 }
 
+export async function updateOcorrenciaAction(
+  id: string,
+  visitaId: string,
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const ctx = await requireOrgContext();
+  const area_id = String(formData.get("area_id") ?? "");
+  const tipo = String(formData.get("tipo") ?? "").trim();
+  if (!area_id) return { error: "Selecione a área." };
+  if (!tipo) return { error: "Informe o tipo de ocorrência." };
+
+  const supabase = await createClient();
+  const { data: safra } = await supabase
+    .from("safras")
+    .select("id")
+    .eq("area_id", area_id)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const str = (key: string) => String(formData.get(key) ?? "").trim() || null;
+
+  const { error } = await supabase
+    .from("ocorrencias")
+    .update({
+      area_id,
+      safra_id: safra?.id ?? null,
+      tipo,
+      severidade: String(formData.get("severidade") ?? "baixa"),
+      descricao: str("descricao"),
+      recomendacao_tecnica: str("recomendacao_tecnica"),
+      prazo_recomendado: str("prazo_recomendado"),
+      produto_recomendado: str("produto_recomendado"),
+      dose: str("dose"),
+      responsavel_acao: str("responsavel_acao"),
+      updated_by: ctx.userId,
+    })
+    .eq("id", id)
+    .eq("organization_id", ctx.organizationId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/visitas/${visitaId}`);
+  redirect(`/visitas/${visitaId}`);
+}
+
 export async function updateOcorrenciaStatusAction(id: string, visitaId: string, status: string) {
   const ctx = await requireOrgContext();
   const supabase = await createClient();
@@ -363,6 +411,61 @@ export async function createRecomendacaoAction(
     created_by: ctx.userId,
     updated_by: ctx.userId,
   });
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/visitas/${visitaId}`);
+  redirect(`/visitas/${visitaId}`);
+}
+
+export async function updateRecomendacaoAction(
+  id: string,
+  visitaId: string,
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const ctx = await requireOrgContext();
+  const categoria = String(formData.get("categoria") ?? "");
+  const recomendacao = String(formData.get("recomendacao") ?? "").trim();
+  if (!categoria) return { error: "Selecione a categoria." };
+  if (!recomendacao) return { error: "Descreva a recomendação." };
+
+  const area_id = String(formData.get("area_id") ?? "") || null;
+  const supabase = await createClient();
+
+  let safra_id: string | null = null;
+  if (area_id) {
+    const { data: safra } = await supabase
+      .from("safras")
+      .select("id")
+      .eq("area_id", area_id)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    safra_id = safra?.id ?? null;
+  }
+
+  const str = (key: string) => String(formData.get(key) ?? "").trim() || null;
+
+  const { error } = await supabase
+    .from("recomendacoes")
+    .update({
+      area_id,
+      safra_id,
+      categoria,
+      recomendacao,
+      prioridade: String(formData.get("prioridade") ?? "media"),
+      prazo_sugerido: str("prazo_sugerido"),
+      produto_sugerido: str("produto_sugerido"),
+      dose: str("dose"),
+      volume_calda: str("volume_calda"),
+      area_aplicar: str("area_aplicar"),
+      observacoes: str("observacoes"),
+      updated_by: ctx.userId,
+    })
+    .eq("id", id)
+    .eq("organization_id", ctx.organizationId);
 
   if (error) return { error: error.message };
 
