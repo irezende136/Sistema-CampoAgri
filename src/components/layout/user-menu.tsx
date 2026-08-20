@@ -35,7 +35,18 @@ export function UserMenu({ email, role }: { email: string | null; role: OrgRole 
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-48 rounded-xl border border-border bg-card shadow-lg py-1 z-50">
-          <form action={signOut}>
+          <form
+            action={signOut}
+            onSubmit={() => {
+              // Limpa as páginas salvas para leitura offline — outra pessoa
+              // no mesmo aparelho não deve ver dados da conta desconectada.
+              if ("caches" in window) {
+                caches.keys().then((keys) => {
+                  keys.filter((k) => k.startsWith("campoagri-pages") || k.startsWith("campoagri-images")).forEach((k) => caches.delete(k));
+                });
+              }
+            }}
+          >
             <button
               type="submit"
               className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted text-left"
