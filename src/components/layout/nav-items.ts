@@ -5,6 +5,7 @@ import {
   MapPin,
   ClipboardList,
   CalendarDays,
+  Wallet,
   Settings,
   UserCog,
   ShieldCheck,
@@ -23,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/propriedades", label: "Propriedades", icon: MapPin },
   { href: "/visitas", label: "Visitas", icon: ClipboardList },
   { href: "/agenda", label: "Agenda", icon: CalendarDays },
+  { href: "/financeiro", label: "Financeiro", icon: Wallet },
 ];
 
 export const NAV_ITEMS_SECONDARY: NavItem[] = [

@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/alt-text -- Image aqui é o do @react-pdf/renderer, não o <img> HTML; não aceita alt */
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import type { VisitReportData } from "@/lib/data/visit-report";
 import { formatDateBR, formatDateTimeBR } from "@/lib/utils/format";

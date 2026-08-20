@@ -1,11 +1,24 @@
 import Link from "next/link";
-import { Users, MapPin, Leaf, ClipboardList, CalendarClock, ClipboardCheck, AlertTriangle, FileText } from "lucide-react";
+import {
+  Users,
+  MapPin,
+  Leaf,
+  ClipboardList,
+  CalendarClock,
+  ClipboardCheck,
+  AlertTriangle,
+  FileText,
+  Wallet,
+  CalendarX,
+  CheckCircle2,
+} from "lucide-react";
 import { requireOrgContext } from "@/lib/auth/context";
 import { getDashboardData } from "@/lib/data/dashboard";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { VisitasChart } from "@/components/dashboard/visitas-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatDateBR } from "@/lib/utils/format";
+import { formatDateBR, formatCurrencyBRL } from "@/lib/utils/format";
 
 export default async function DashboardPage() {
   const ctx = await requireOrgContext();
@@ -30,9 +43,79 @@ export default async function DashboardPage() {
         <StatCard label="Recomendações pendentes" value={data.recomendacoesPendentes} icon={ClipboardCheck} tone="accent" />
         <StatCard label="Ocorrências críticas" value={data.ocorrenciasCriticas} icon={AlertTriangle} tone="danger" />
         <StatCard label="Relatórios no mês" value={data.relatoriosMes} icon={FileText} />
+        <StatCard label="A receber" value={formatCurrencyBRL(data.aReceber)} icon={Wallet} tone="accent" />
       </div>
 
-      <Card>
+      {(data.agendamentosAtrasados.length > 0 || data.recomendacoesVencidas.length > 0) && (
+        <Card className="border-warning/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle size={18} className="text-warning" /> Central de alertas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {data.agendamentosAtrasados.length > 0 && (
+              <div>
+                <div className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+                  <CalendarX size={15} className="text-danger" /> Visitas agendadas em atraso
+                </div>
+                <ul className="space-y-1">
+                  {data.agendamentosAtrasados.map((a) => (
+                    <li key={a.id} className="text-sm text-muted-foreground flex items-center justify-between gap-2">
+                      <span className="truncate">
+                        {(a as { produtores?: { nome?: string } }).produtores?.nome} —{" "}
+                        {(a as { propriedades?: { nome?: string } }).propriedades?.nome}
+                      </span>
+                      <span className="text-danger font-medium shrink-0">{formatDateBR(a.data_prevista)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/agenda" className="text-xs text-primary font-medium">
+                  Reagendar ou concluir na agenda →
+                </Link>
+              </div>
+            )}
+            {data.recomendacoesVencidas.length > 0 && (
+              <div>
+                <div className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+                  <ClipboardCheck size={15} className="text-warning" /> Recomendações com prazo vencido
+                </div>
+                <ul className="space-y-1">
+                  {data.recomendacoesVencidas.map((r) => (
+                    <li key={r.id} className="text-sm text-muted-foreground flex items-center justify-between gap-2">
+                      <Link href={r.visita_id ? `/visitas/${r.visita_id}` : "/visitas"} className="truncate hover:underline">
+                        {r.recomendacao}
+                      </Link>
+                      <span className="text-danger font-medium shrink-0">{formatDateBR(r.prazo_sugerido)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Visitas por mês</CardTitle>
+            <Link href="/visitas" className="text-sm text-primary font-medium">
+              Ver visitas
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {data.visitasPorMes.every((m) => m.count === 0) ? (
+              <div className="h-36 flex items-center justify-center text-sm text-muted-foreground gap-2">
+                <CheckCircle2 size={16} /> Nenhuma visita registrada nos últimos 6 meses.
+              </div>
+            ) : (
+              <VisitasChart meses={data.visitasPorMes} />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Próximas visitas agendadas</CardTitle>
           <Link href="/agenda" className="text-sm text-primary font-medium">
@@ -67,7 +150,8 @@ export default async function DashboardPage() {
             </ul>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

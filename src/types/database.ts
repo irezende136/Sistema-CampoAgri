@@ -266,6 +266,104 @@ export type Database = {
           },
         ]
       }
+      financeiro_visitas: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_lancamento: string
+          data_pagamento: string | null
+          deleted_at: string | null
+          descricao: string
+          desconto_tipo: string | null
+          desconto_valor: number | null
+          forma_pagamento: string | null
+          id: string
+          observacoes: string | null
+          organization_id: string
+          produtor_id: string
+          propriedade_id: string | null
+          status_pagamento: string
+          updated_at: string
+          updated_by: string | null
+          valor: number
+          valor_final: number
+          visita_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_lancamento?: string
+          data_pagamento?: string | null
+          deleted_at?: string | null
+          descricao: string
+          desconto_tipo?: string | null
+          desconto_valor?: number | null
+          forma_pagamento?: string | null
+          id?: string
+          observacoes?: string | null
+          organization_id: string
+          produtor_id: string
+          propriedade_id?: string | null
+          status_pagamento?: string
+          updated_at?: string
+          updated_by?: string | null
+          valor: number
+          valor_final: number
+          visita_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_lancamento?: string
+          data_pagamento?: string | null
+          deleted_at?: string | null
+          descricao?: string
+          desconto_tipo?: string | null
+          desconto_valor?: number | null
+          forma_pagamento?: string | null
+          id?: string
+          observacoes?: string | null
+          organization_id?: string
+          produtor_id?: string
+          propriedade_id?: string | null
+          status_pagamento?: string
+          updated_at?: string
+          updated_by?: string | null
+          valor?: number
+          valor_final?: number
+          visita_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financeiro_visitas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_visitas_produtor_id_fkey"
+            columns: ["produtor_id"]
+            isOneToOne: false
+            referencedRelation: "produtores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_visitas_propriedade_id_fkey"
+            columns: ["propriedade_id"]
+            isOneToOne: false
+            referencedRelation: "propriedades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financeiro_visitas_visita_id_fkey"
+            columns: ["visita_id"]
+            isOneToOne: false
+            referencedRelation: "visitas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fotos: {
         Row: {
           area_id: string | null

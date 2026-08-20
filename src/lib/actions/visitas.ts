@@ -259,26 +259,22 @@ export async function createOcorrenciaAction(
 
   const str = (key: string) => String(formData.get(key) ?? "").trim() || null;
 
-  const { data, error } = await supabase
-    .from("ocorrencias")
-    .insert({
-      organization_id: ctx.organizationId,
-      visita_id: visitaId,
-      area_id,
-      safra_id: safra?.id ?? null,
-      tipo,
-      severidade: String(formData.get("severidade") ?? "baixa"),
-      descricao: str("descricao"),
-      recomendacao_tecnica: str("recomendacao_tecnica"),
-      prazo_recomendado: str("prazo_recomendado"),
-      produto_recomendado: str("produto_recomendado"),
-      dose: str("dose"),
-      responsavel_acao: str("responsavel_acao"),
-      created_by: ctx.userId,
-      updated_by: ctx.userId,
-    })
-    .select("id")
-    .single();
+  const { error } = await supabase.from("ocorrencias").insert({
+    organization_id: ctx.organizationId,
+    visita_id: visitaId,
+    area_id,
+    safra_id: safra?.id ?? null,
+    tipo,
+    severidade: String(formData.get("severidade") ?? "baixa"),
+    descricao: str("descricao"),
+    recomendacao_tecnica: str("recomendacao_tecnica"),
+    prazo_recomendado: str("prazo_recomendado"),
+    produto_recomendado: str("produto_recomendado"),
+    dose: str("dose"),
+    responsavel_acao: str("responsavel_acao"),
+    created_by: ctx.userId,
+    updated_by: ctx.userId,
+  });
 
   if (error) return { error: error.message };
 

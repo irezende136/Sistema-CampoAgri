@@ -58,7 +58,10 @@ export async function updateSafraAction(id: string, _prev: ActionState, formData
   if (!payload.nome) return { error: "Informe o nome da safra/ciclo." };
 
   const supabase = await createClient();
-  const { area_id: _areaId, propriedade_id: _propriedadeId, ...rest } = payload;
+  // area_id/propriedade_id não podem ser trocados na edição
+  const { area_id: _a, propriedade_id: _p, ...rest } = payload;
+  void _a;
+  void _p;
   const { error } = await supabase
     .from("safras")
     .update({ ...rest, updated_by: ctx.userId })

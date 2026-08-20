@@ -12,8 +12,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { NavigateButtons } from "@/components/propriedades/navigate-buttons";
 import { statusTone, statusLabel } from "@/lib/domain/status-tones";
-import { formatDateBR } from "@/lib/utils/format";
+import { formatDateBR, formatCurrencyBRL } from "@/lib/utils/format";
+import { FORMA_PAGAMENTO_LABELS } from "@/lib/domain/financeiro";
 import { ResumoForm } from "@/components/visitas/resumo-form";
+import { LancamentoForm } from "@/components/financeiro/lancamento-form";
+import { LancamentoActions } from "@/components/financeiro/lancamento-actions";
+import { createLancamentoAction } from "@/lib/actions/financeiro";
 import { FinalizarButton } from "@/components/visitas/finalizar-button";
 import { PhotoUpload } from "@/components/visitas/photo-upload";
 import { PhotoGallery } from "@/components/visitas/photo-gallery";
@@ -60,7 +64,7 @@ export default async function VisitaDetalhePage({ params }: { params: Promise<{ 
   ).propriedades;
   const readOnly = visita.status !== "rascunho";
 
-  const [{ data: avaliacoes }, { data: ocorrencias }, { data: recomendacoes }, { data: fotos }, { data: todasAreas }, { data: relatorio }] =
+  const [{ data: avaliacoes }, { data: ocorrencias }, { data: recomendacoes }, { data: fotos }, { data: todasAreas }, { data: relatorio }, { data: lancamentos }] =
     await Promise.all([
       supabase
         .from("avaliacoes_area")
@@ -87,7 +91,20 @@ export default async function VisitaDetalhePage({ params }: { params: Promise<{ 
         .order("created_at", { ascending: false }),
       supabase.from("areas").select("id, nome").eq("propriedade_id", propriedade.id).is("deleted_at", null).order("nome"),
       supabase.from("relatorios").select("id").eq("visita_id", id).is("deleted_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase
+        .from("financeiro_visitas")
+        .select("*")
+        .eq("visita_id", id)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false }),
     ]);
+
+  const totalCobrado = (lancamentos ?? [])
+    .filter((l) => l.status_pagamento !== "cancelado")
+    .reduce((sum, l) => sum + (l.valor_final ?? 0), 0);
+  const totalPendente = (lancamentos ?? [])
+    .filter((l) => l.status_pagamento === "pendente")
+    .reduce((sum, l) => sum + (l.valor_final ?? 0), 0);
 
   const areasAvaliadasIds = new Set((avaliacoes ?? []).map((a) => (a as unknown as { areas: { id: string } }).areas.id));
   const areasDisponiveis = (todasAreas ?? []).filter((a) => !areasAvaliadasIds.has(a.id));
@@ -284,6 +301,67 @@ export default async function VisitaDetalhePage({ params }: { params: Promise<{ 
             />
           )}
           <PhotoGallery visitaId={id} fotos={fotos ?? []} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Financeiro da visita</CardTitle>
+          {lancamentos && lancamentos.length > 0 && (
+            <div className="text-sm text-right">
+              <span className="font-semibold">{formatCurrencyBRL(totalCobrado)}</span>
+              {totalPendente > 0 && (
+                <span className="block text-xs text-muted-foreground">
+                  {formatCurrencyBRL(totalPendente)} a receber
+                </span>
+              )}
+            </div>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!lancamentos || lancamentos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma cobrança lançada para esta visita. Valores e preços do serviço técnico são lançados apenas aqui.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {lancamentos.map((l) => (
+                <div
+                  key={l.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm"
+                >
+                  <div className="min-w-0">
+                    <div className="font-medium flex items-center gap-2 flex-wrap">
+                      {l.descricao}
+                      <Badge tone={statusTone(l.status_pagamento)}>{statusLabel(l.status_pagamento)}</Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatDateBR(l.data_lancamento)}
+                      {l.desconto_valor
+                        ? ` · desconto ${l.desconto_tipo === "percentual" ? `${l.desconto_valor}%` : formatCurrencyBRL(l.desconto_valor)}`
+                        : ""}
+                      {l.forma_pagamento ? ` · ${FORMA_PAGAMENTO_LABELS[l.forma_pagamento] ?? l.forma_pagamento}` : ""}
+                      {l.status_pagamento === "pago" && l.data_pagamento ? ` · pago em ${formatDateBR(l.data_pagamento)}` : ""}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`font-semibold ${l.status_pagamento === "cancelado" ? "line-through text-muted-foreground" : ""}`}>
+                      {formatCurrencyBRL(l.valor_final)}
+                    </span>
+                    <LancamentoActions id={l.id} status={l.status_pagamento} visitaId={id} canDelete={canDelete(ctx.role)} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <LancamentoForm
+            action={createLancamentoAction.bind(null, {
+              visitaId: id,
+              produtorId: visita.produtor_id,
+              propriedadeId: propriedade.id,
+            })}
+          />
         </CardContent>
       </Card>
 
