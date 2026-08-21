@@ -51,7 +51,7 @@ Legenda de status: ✅ Concluído e verificado em código+banco · 🟡 Parcial/
 | Botão WhatsApp na tela do produtor | ✅ | `src/lib/utils/whatsapp.ts`, usado em `src/app/(app)/produtores` **[CÓDIGO]** |
 | Logs de auditoria | ✅ | tabela `logs_auditoria`, função `log_action()` **[BANCO]** |
 | LGPD/CDC — aceite de termos | ✅ | `src/app/(legal)/termos`, `termos/aceitar`, `privacidade`, `src/lib/actions/legal.ts`, colunas `profiles.termos_aceitos_em`/`termos_versao`, gate no middleware **[CÓDIGO+BANCO]** — ver observação na seção 6 sobre cobertura do gate |
-| PWA (manifest + service worker) | 🟡 | `public/manifest.webmanifest` e `public/sw.js` existem e funcionam, mas o cache do SW só cobre o app-shell mínimo (sem dados/API), e o `theme_color` do manifest é estático, não reflete a cor dinâmica por organização (ver seção 12). **[CÓDIGO]** |
+| PWA (manifest + service worker) | ✅ | **Ampliado em 2026-08-21**: `public/sw.js` v2 faz cache das páginas visitadas e das fotos do Storage, permitindo **consulta offline** (somente leitura) das telas já abertas; página `/offline` como fallback e banner de "sem conexão". Criar/editar continua exigindo conexão — não há fila de sincronização offline (ver seção 12). O `theme_color` do manifest segue estático, não reflete a cor dinâmica por organização. **[CÓDIGO]** |
 | Planos de assinatura (trial/individual/profissional/equipe) | ⚠️ | Não há tabela de planos/billing nem integração de pagamento no schema ou no código. A arquitetura multi-tenant está pronta para isso, mas a funcionalidade de planos em si não foi implementada. **[BANCO+CÓDIGO]** |
 | Certificados de vacinação / módulo veterinário | ❌ N/A | Este projeto é agronômico, não veterinário. Não existe (e não foi criado) nenhum módulo de vacinação, animais ou certificados sanitários. Qualquer menção a isso em instruções genéricas de handoff não se aplica a este sistema. |
 
@@ -265,8 +265,16 @@ Por instrução explícita, **nada nesta seção foi corrigido** — apenas iden
 
 - **Branch**: `claude/agronomy-saas-platform-fpxpei`
 - **Deploy de produção**: ativo na Vercel, alias estável (não usar URLs de deploy com hash específico como referência permanente)
-- **Banco de produção**: projeto Supabase `ynspkydroyncqhswjznm`, 10 migrations aplicadas sem drift (`0010_rls_initplan_fix.sql` adicionada em 2026-07-11), 2 organizações reais com dados (uma semeada/demo, uma real de usuário final)
+- **Banco de produção**: projeto Supabase `ynspkydroyncqhswjznm`, 11 migrations aplicadas sem drift (`0011_financeiro_visitas.sql` adicionada em 2026-08-21), 2 organizações reais com dados (uma semeada/demo, uma real de usuário final)
 - **Atualização de 2026-07-11**: nesta rodada, 4 dos 5 itens de dívida priorizados (seção 14) foram executados: auditoria/correção do gate de termos, correção das 4 políticas RLS `auth_rls_initplan`, implementação de UI para `insumos_custos`, e implementação de edição de ocorrências/recomendações. O único item não concluído é habilitar `auth_leaked_password_protection`, que exige acesso ao Dashboard do Supabase (não há ferramenta MCP para alterar configuração de Auth) — ação pendente do usuário.
+
+- **Atualização de 2026-08-21** (paridade com o sistema veterinário CampoVet + offline):
+  - **Módulo Financeiro** (novo): tabela `financeiro_visitas` (migration `0011`, RLS por organização validada — 4 políticas, nenhuma permissiva), Server Actions em `src/lib/actions/financeiro.ts` com desconto percentual/fixo que nunca deixa o total negativo (regra herdada do CampoVet), seção "Financeiro da visita" em `visitas/[id]` e página `/financeiro` com filtros por status e totais (a receber / recebido no mês).
+  - **Dashboard**: central de alertas (visitas agendadas em atraso, recomendações com prazo vencido), gráfico de barras de visitas por mês (6 meses, sem biblioteca externa) e card "A receber".
+  - **Agenda**: agrupada por data (Atrasadas / Hoje / Amanhã / dia da semana), atrasadas destacadas, botão WhatsApp com mensagem de confirmação pré-preenchida.
+  - **Modo offline (PWA)**: `public/sw.js` reescrito (v2) — cache-first para assets do build e fotos do Storage, network-first com timeout e fallback em cache para navegações/RSC, página `/offline` precacheada, banner de "sem conexão" global. **Somente leitura**: criar/editar exige conexão. Logout limpa os caches de páginas e fotos.
+  - **Correção de timezone**: `formatDateTimeBR` e os cálculos de "hoje" agora usam `America/Sao_Paulo` (o servidor da Vercel roda em UTC e exibia horários/datas errados a partir das 21h). Novo helper `todayInSaoPauloISO()`.
+  - Lint zerado (0 erros, 0 avisos) e build de produção limpo após todas as mudanças.
 
 ---
 
