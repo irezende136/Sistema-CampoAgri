@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { LocateFixed, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/field";
+import { GpsCapture } from "@/components/ui/gps-capture";
 import type { Database } from "@/types/database";
 import type { ActionState } from "@/lib/actions/auth";
 
@@ -35,33 +35,6 @@ export function PropriedadeForm({
   const [state, formAction, pending] = useActionState(action, undefined);
   const [latitude, setLatitude] = useState(propriedade?.latitude?.toString() ?? "");
   const [longitude, setLongitude] = useState(propriedade?.longitude?.toString() ?? "");
-  const [locating, setLocating] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
-
-  function handleUseCurrentLocation() {
-    if (!navigator.geolocation) {
-      setLocationError("Seu navegador não suporta localização.");
-      return;
-    }
-    setLocating(true);
-    setLocationError(null);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude.toFixed(6));
-        setLongitude(position.coords.longitude.toFixed(6));
-        setLocating(false);
-      },
-      (err) => {
-        setLocationError(
-          err.code === err.PERMISSION_DENIED
-            ? "Permissão de localização negada."
-            : "Não foi possível obter a localização."
-        );
-        setLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 15000 }
-    );
-  }
 
   return (
     <form action={formAction} className="space-y-4">
@@ -101,35 +74,15 @@ export function PropriedadeForm({
         <Input id="localizacao" name="localizacao" defaultValue={propriedade?.localizacao ?? ""} />
       </FieldGroup>
 
-      <div>
-        <p className="block text-sm font-medium mb-1.5">Coordenadas GPS</p>
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            name="latitude"
-            type="number"
-            step="0.000001"
-            placeholder="Latitude"
-            value={latitude}
-            onChange={(e) => setLatitude(e.target.value)}
-          />
-          <Input
-            name="longitude"
-            type="number"
-            step="0.000001"
-            placeholder="Longitude"
-            value={longitude}
-            onChange={(e) => setLongitude(e.target.value)}
-          />
-        </div>
-        <Button type="button" variant="secondary" size="sm" className="mt-2" onClick={handleUseCurrentLocation} disabled={locating}>
-          {locating ? <Loader2 size={16} className="animate-spin" /> : <LocateFixed size={16} />}
-          {locating ? "Obtendo localização..." : "Usar minha localização atual"}
-        </Button>
-        {locationError && <p className="mt-1 text-xs text-danger">{locationError}</p>}
-        <p className="mt-1 text-xs text-muted-foreground">
-          Registre as coordenadas estando na propriedade para gerar o link de navegação (Waze/Google Maps).
-        </p>
-      </div>
+      <GpsCapture
+        latitude={latitude}
+        longitude={longitude}
+        onChange={(lat, lon) => {
+          setLatitude(lat);
+          setLongitude(lon);
+        }}
+        hint="Registre as coordenadas estando na propriedade para gerar o link de navegação (Waze/Google Maps)."
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <FieldGroup label="Área total (ha)" htmlFor="area_total_ha">
