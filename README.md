@@ -111,6 +111,17 @@ adiciona pela tela **Usuários** informando o e-mail já cadastrado. A função
 `find_user_by_email` localiza a conta sem expor a tabela `profiles` de outras
 organizações.
 
+## Recuperação de senha
+
+O login tem o link **Esqueci minha senha** (`/esqueci-senha`). O usuário informa
+o e-mail, recebe um link do Supabase e cai em `/redefinir-senha` para criar a
+nova senha. Por segurança, a tela de confirmação é a mesma exista ou não uma
+conta com aquele e-mail — assim não é possível descobrir quais e-mails estão
+cadastrados.
+
+Para o link funcionar, a URL pública do deploy precisa estar em
+*Authentication → URL Configuration* no painel do Supabase (ver seção Deploy).
+
 ## Dados de demonstração
 
 Rodando `supabase/seed/seed.sql`, fica disponível um login de demonstração já
@@ -145,6 +156,8 @@ ambiente do frontend.
 3. Deploy. Todo push na branch de produção gera um novo deploy automaticamente.
 4. No painel do Supabase, em Authentication → URL Configuration, adicione a URL
    do deploy Vercel em *Site URL* e *Redirect URLs* (`/auth/callback`).
+   O mesmo `/auth/callback` atende a confirmação de e-mail e a redefinição de
+   senha (que chega como `/auth/callback?next=/redefinir-senha`).
 
 > Este ambiente de execução não tem uma sessão autenticada do Vercel CLI nem uma
 > API de criação de projetos, então a conexão inicial do repositório precisa ser

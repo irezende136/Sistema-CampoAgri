@@ -58,6 +58,44 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
   redirect("/cadastro/confirme");
 }
 
+export async function requestPasswordReset(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { error: "Informe seu e-mail." };
+
+  const supabase = await createClient();
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=/redefinir-senha`,
+  });
+
+  // Sempre seguimos para a mesma tela, mesmo se o e-mail não existir: revelar
+  // isso permitiria descobrir quais e-mails têm conta no sistema.
+  redirect("/esqueci-senha/enviado");
+}
+
+export async function updatePassword(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const password = String(formData.get("password") ?? "");
+  const confirmacao = String(formData.get("password_confirm") ?? "");
+
+  if (password.length < 8) return { error: "A senha deve ter ao menos 8 caracteres." };
+  if (password !== confirmacao) return { error: "As senhas não conferem." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Link inválido ou expirado. Solicite um novo link de redefinição." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) return { error: error.message };
+
+  redirect("/dashboard");
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

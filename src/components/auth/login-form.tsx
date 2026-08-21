@@ -21,6 +21,11 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
           <FieldGroup label="Senha" htmlFor="password">
             <Input id="password" name="password" type="password" required autoComplete="current-password" placeholder="••••••••" />
           </FieldGroup>
+          <div className="-mt-2 text-right">
+            <Link href="/esqueci-senha" className="text-sm text-muted-foreground hover:text-primary">
+              Esqueci minha senha
+            </Link>
+          </div>
           {state?.error && <p className="text-sm text-danger">{state.error}</p>}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Entrando..." : "Entrar"}
