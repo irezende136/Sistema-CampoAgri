@@ -9,7 +9,7 @@ import type { ActionState } from "@/lib/actions/auth";
 
 function readPayload(formData: FormData) {
   return {
-    produtor_id: String(formData.get("produtor_id") ?? ""),
+    produtor_id: String(formData.get("produtor_id") ?? "").trim() || null,
     nome: String(formData.get("nome") ?? "").trim(),
     municipio: String(formData.get("municipio") ?? "").trim() || null,
     estado: String(formData.get("estado") ?? "").trim() || null,
@@ -25,13 +25,20 @@ function readPayload(formData: FormData) {
 export async function createPropriedadeAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const ctx = await requireOrgContext();
   const payload = readPayload(formData);
+  const produtorId = payload.produtor_id;
   if (!payload.nome) return { error: "Informe o nome da propriedade." };
-  if (!payload.produtor_id) return { error: "Produtor não informado." };
+  if (!produtorId) return { error: "Produtor não informado." };
 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("propriedades")
-    .insert({ ...payload, organization_id: ctx.organizationId, created_by: ctx.userId, updated_by: ctx.userId })
+    .insert({
+      ...payload,
+      produtor_id: produtorId,
+      organization_id: ctx.organizationId,
+      created_by: ctx.userId,
+      updated_by: ctx.userId,
+    })
     .select("id")
     .single();
 
@@ -58,9 +65,13 @@ export async function updatePropriedadeAction(
   if (!payload.nome) return { error: "Informe o nome da propriedade." };
 
   const supabase = await createClient();
+  // O produtor nao muda na edicao (o select fica disabled no formulario e,
+  // por isso, nem chega no FormData) — nao deve ir no update.
+  const { produtor_id: _produtorId, ...rest } = payload;
+  void _produtorId;
   const { error } = await supabase
     .from("propriedades")
-    .update({ ...payload, updated_by: ctx.userId })
+    .update({ ...rest, updated_by: ctx.userId })
     .eq("id", id)
     .eq("organization_id", ctx.organizationId);
 
