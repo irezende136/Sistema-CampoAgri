@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { RefreshCw, CloudOff, CloudUpload, Check, WifiOff } from "lucide-react";
 import { useSync } from "./sync-provider";
 import { formatDateTimeBR } from "@/lib/utils/format";
@@ -16,6 +16,7 @@ function subscribeOnline(callback: () => void) {
 
 export function SyncStatus() {
   const { pendentes, sincronizando, ultimaSync, erro, sincronizar } = useSync();
+  const [detalheAberto, setDetalheAberto] = useState(false);
   const offline = useSyncExternalStore(
     subscribeOnline,
     () => !navigator.onLine,
@@ -52,16 +53,44 @@ export function SyncStatus() {
     .join("\n");
 
   return (
-    <button
-      type="button"
-      onClick={() => void sincronizar()}
-      disabled={sincronizando || offline}
-      title={titulo}
-      className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium hover:bg-muted disabled:cursor-default ${cor}`}
-    >
-      <Icon size={15} className={girando ? "animate-spin" : undefined} />
-      <span className="hidden sm:inline">{texto}</span>
-      {pendentes > 0 && <span className="sm:hidden">{pendentes}</span>}
-    </button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => {
+          if (erro) return setDetalheAberto((v) => !v);
+          void sincronizar();
+        }}
+        disabled={sincronizando || offline}
+        title={titulo}
+        className={`inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium hover:bg-muted disabled:cursor-default ${cor}`}
+      >
+        <Icon size={15} className={girando ? "animate-spin" : undefined} />
+        <span className="hidden sm:inline">{texto}</span>
+        {pendentes > 0 && <span className="sm:hidden">{pendentes}</span>}
+      </button>
+
+      {/* No celular não existe "passar o mouse" para ver o title, então o erro
+          precisa ser legível na tela — sem isso não há como diagnosticar. */}
+      {erro && detalheAberto && (
+        <div className="absolute right-0 mt-2 w-72 rounded-xl border border-danger/40 bg-card shadow-lg p-3 z-50 space-y-2">
+          <div className="text-xs font-semibold text-danger">Falha ao sincronizar</div>
+          <p className="text-xs text-muted-foreground break-words">{erro}</p>
+          <p className="text-xs text-muted-foreground">
+            Suas alterações continuam salvas no aparelho
+            {pendentes > 0 ? ` (${pendentes} para enviar)` : ""}.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setDetalheAberto(false);
+              void sincronizar();
+            }}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

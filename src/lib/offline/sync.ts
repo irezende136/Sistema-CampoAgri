@@ -53,6 +53,7 @@ async function setLastSyncAt(value: string): Promise<void> {
  */
 export async function pull(organizationId: string): Promise<void> {
   const supabase = createClient();
+  const falhas: string[] = [];
 
   for (const table of SYNCED_TABLES) {
     const since = await getLastPulledAt(table);
@@ -61,7 +62,14 @@ export async function pull(organizationId: string): Promise<void> {
     if (since) query = query.gt("updated_at", since);
 
     const { data, error } = await query.order("updated_at", { ascending: true }).limit(2000);
-    if (error) throw new Error(`Falha ao baixar ${table}: ${error.message}`);
+
+    // Uma tabela com problema não pode derrubar as outras: seguimos baixando o
+    // resto e reportamos no fim. Antes, `fotos` sem `updated_at` fazia a
+    // sincronização inteira falhar e o app parecia quebrado mesmo online.
+    if (error) {
+      falhas.push(`${table} (${error.message})`);
+      continue;
+    }
 
     const rows = (data ?? []) as Row[];
     if (rows.length === 0) continue;
@@ -74,6 +82,10 @@ export async function pull(organizationId: string): Promise<void> {
 
     const maisRecente = rows[rows.length - 1]?.updated_at;
     if (maisRecente) await setLastPulledAt(table, maisRecente);
+  }
+
+  if (falhas.length > 0) {
+    throw new Error(`Falha ao baixar: ${falhas.join("; ")}`);
   }
 }
 
