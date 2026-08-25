@@ -1,6 +1,8 @@
 # PROJECT_HANDOFF.md — Sistema CampoAgri
 
-> Documento de transição de contexto. Gerado por análise direta do código-fonte, das migrations SQL, do banco de dados remoto (via MCP Supabase) e do deploy remoto (via MCP Vercel), não apenas do histórico de chat. Última atualização: **2026-07-10**, commit `f6dbc86` (branch `claude/agronomy-saas-platform-fpxpei`).
+> Documento de transição de contexto. Gerado por análise direta do código-fonte, das migrations SQL, do banco de dados remoto (via MCP Supabase) e do deploy remoto (via MCP Vercel), não apenas do histórico de chat. Última atualização: **2026-08-25**, commit `a27b387` (branch `claude/agronomy-saas-platform-fpxpei`).
+>
+> **Leia a seção 4 antes de escrever código.** Em 2026-08-25 o app passou de "Server Components lendo o Postgres" para **local-first**: as telas leem e gravam num banco local (IndexedDB) e uma fila sincroniza com o Supabase. Quase todas as Server Actions foram removidas. Padrões antigos de mutação não se aplicam mais.
 >
 > Convenção usada neste documento: cada afirmação é marcada como **[CÓDIGO]** (confirmado lendo o arquivo/diretório), **[BANCO]** (confirmado via SQL/MCP Supabase contra o projeto remoto `ynspkydroyncqhswjznm`), **[DEPLOY]** (confirmado via MCP Vercel contra o deploy de produção), **[CHAT]** (mencionado na conversa mas não re-verificado agora) ou **[INFERÊNCIA]** (dedução minha, não um fato direto). Nada aqui foi tratado como "concluído" apenas por ter sido dito no chat.
 
@@ -33,25 +35,28 @@ Legenda de status: ✅ Concluído e verificado em código+banco · 🟡 Parcial/
 | Safras + planejamento de plantio | ✅ | `src/app/(app)/safras`, tabelas `safras` e `planejamento_plantio` **[CÓDIGO+BANCO]** |
 | Visitas (criar) | ✅ | `src/app/(app)/visitas/nova` **[CÓDIGO]** |
 | Visitas (editar) | ✅ | `src/app/(app)/visitas/[id]/editar` **[CÓDIGO]** |
-| Visitas (excluir) | ✅ | ação de exclusão em `src/lib/actions/visitas.ts` **[CÓDIGO]** |
+| Visitas (excluir) | ✅ | `excluirVisitaLocal` em `src/lib/offline/visita-actions.ts` (exclusão lógica) **[CÓDIGO]** |
 | Avaliação de área dentro da visita | ✅ | `src/app/(app)/visitas/[id]/areas/[avaliacaoId]`, tabela `avaliacoes_area` **[CÓDIGO+BANCO]** |
 | Ocorrências agronômicas — criar | ✅ | `src/app/(app)/visitas/[id]/ocorrencias/nova`, tabela `ocorrencias` **[CÓDIGO+BANCO]** |
-| Ocorrências agronômicas — editar | ✅ | **Implementado em 2026-07-11**: `src/app/(app)/visitas/[id]/ocorrencias/[ocorrenciaId]/editar/page.tsx` + `updateOcorrenciaAction` em `src/lib/actions/visitas.ts`. Só disponível enquanto a visita está em `rascunho` (mesma regra já aplicada a criação/exclusão). **[CÓDIGO]** |
+| Ocorrências agronômicas — editar | ✅ | `src/components/visitas/ocorrencia-page.tsx` (criar e editar na mesma tela), gravando via `visita-actions.ts`. Só enquanto a visita está em `rascunho`. **[CÓDIGO]** |
 | Recomendações técnicas — criar | ✅ | `src/app/(app)/visitas/[id]/recomendacoes/nova`, tabela `recomendacoes` **[CÓDIGO+BANCO]** |
-| Recomendações técnicas — editar | ✅ | **Implementado em 2026-07-11**: `src/app/(app)/visitas/[id]/recomendacoes/[recomendacaoId]/editar/page.tsx` + `updateRecomendacaoAction`. Mesma regra de `rascunho`. **[CÓDIGO]** |
-| Fotos (upload, galeria) | ✅ | `src/lib/actions/fotos.ts`, tabela `fotos`, bucket Storage `campoagri` (ver seção 5) **[CÓDIGO+BANCO]** |
-| Insumos/custos por safra | ✅ | **Implementado em 2026-07-11**: seção "Insumos e custos" na página de detalhe da safra (`src/app/(app)/safras/[id]/page.tsx`), formulário `src/components/safras/insumo-form.tsx`, ações `createInsumoAction`/`deleteInsumoAction` em `src/lib/actions/insumos.ts`. Calcula `custo_ha` (quantidade × preço unitário) e `custo_total` (custo_ha × área da área vinculada) automaticamente; exibe total acumulado da safra. Reaproveita as políticas RLS já existentes desde `0003_rls.sql` (`insumos_select/insert/update/delete`), sem migration nova. **[CÓDIGO+BANCO]** |
+| Recomendações técnicas — editar | ✅ | `src/components/visitas/recomendacao-page.tsx`, mesma regra de `rascunho`. **[CÓDIGO]** |
+| Fotos (upload, galeria) | ✅ | `src/components/visitas/visita-fotos.tsx`. **Funciona offline**: o arquivo fica no IndexedDB e sobe para o Storage na sincronização; até lá a miniatura lê o arquivo local e mostra o aviso "no aparelho". **[CÓDIGO+BANCO]** |
+| Insumos/custos por safra | ✅ | Seção "Insumos e custos" em `src/components/safras/safras-pages.tsx`. Calcula `custo_ha` (quantidade × preço) e `custo_total` (custo_ha × área) automaticamente. Reaproveita as políticas RLS de `0003_rls.sql`. **[CÓDIGO+BANCO]** |
 | Relatório de visita em PDF | ✅ | `src/lib/pdf/visit-report-document.tsx` (`@react-pdf/renderer`), rota `src/app/(app)/visitas/[id]/relatorio/route.tsx`, dados via `src/lib/data/visit-report.ts` **[CÓDIGO]** |
 | Agenda de visitas | ✅ | `src/app/(app)/agenda`, tabela `agenda_visitas` **[CÓDIGO+BANCO]** |
-| Dashboard com KPIs | ✅ | `src/app/(app)/dashboard`, `src/lib/data/dashboard.ts` **[CÓDIGO]** |
-| Histórico/timeline de propriedade | ✅ | `src/lib/data/property-history.ts` **[CÓDIGO]** |
+| Dashboard com KPIs | ✅ | `src/app/(app)/dashboard`, `src/lib/data/dashboard.ts`. Inclui central de alertas (visitas atrasadas, recomendações vencidas), gráfico de visitas por mês e card "A receber". **Ainda server-side** — exige conexão. **[CÓDIGO]** |
+| Histórico/timeline de propriedade | ✅ | `src/components/propriedades/historico-page.tsx`, lendo visitas + relatórios do banco local **[CÓDIGO]** |
 | Gestão de usuários/equipe da organização | ✅ | `src/app/(app)/usuarios`, `src/lib/actions/team.ts`, função `find_user_by_email` **[CÓDIGO+BANCO]** |
 | Configurações da organização (nome, cor, logo, assinatura) | ✅ | `src/app/(app)/configuracoes`, `src/lib/actions/organization.ts`, coluna `organizations.cor_primaria` **[CÓDIGO+BANCO]** |
 | Localização GPS da propriedade + Waze/Maps | ✅ | `src/lib/utils/maps.ts`, campos de latitude/longitude em `propriedades`, botões de navegação nas páginas de propriedade **[CÓDIGO+BANCO]** |
 | Botão WhatsApp na tela do produtor | ✅ | `src/lib/utils/whatsapp.ts`, usado em `src/app/(app)/produtores` **[CÓDIGO]** |
 | Logs de auditoria | ✅ | tabela `logs_auditoria`, função `log_action()` **[BANCO]** |
 | LGPD/CDC — aceite de termos | ✅ | `src/app/(legal)/termos`, `termos/aceitar`, `privacidade`, `src/lib/actions/legal.ts`, colunas `profiles.termos_aceitos_em`/`termos_versao`, gate no middleware **[CÓDIGO+BANCO]** — ver observação na seção 6 sobre cobertura do gate |
-| PWA (manifest + service worker) | ✅ | **Ampliado em 2026-08-21**: `public/sw.js` v2 faz cache das páginas visitadas e das fotos do Storage, permitindo **consulta offline** (somente leitura) das telas já abertas; página `/offline` como fallback e banner de "sem conexão". Criar/editar continua exigindo conexão — não há fila de sincronização offline (ver seção 12). O `theme_color` do manifest segue estático, não reflete a cor dinâmica por organização. **[CÓDIGO]** |
+| PWA + service worker | ✅ | `public/sw.js` v3: cache-first para assets e fotos, network-first com fallback para navegações, página `/offline`, banner de "sem conexão". `sw.js` excluído do matcher do middleware — servido com redirect, o registro do service worker **falha** (bug corrigido em 2026-08-25). **[CÓDIGO]** |
+| **Modo offline completo (local-first)** | ✅ | Todo o trabalho de campo cria/edita/exclui sem sinal: visitas, ocorrências, recomendações, avaliações, fotos, produtores, propriedades, áreas, safras, insumos, agenda e financeiro. Camada em `src/lib/offline/` (ver seção 4). **Verificado em navegador real** apenas na camada local; o ciclo completo contra o Postgres **nunca foi testado** (ver seção 12). **[CÓDIGO]** |
+| Financeiro (cobrança da visita) | ✅ | Tabela `financeiro_visitas` (migration `0011`), seção dentro da visita + página `/financeiro` com filtros e totais. Desconto percentual ou fixo, nunca deixa o total negativo (regra herdada do CampoVet). **[CÓDIGO+BANCO]** |
+| Recuperação de senha por e-mail | ✅ | `/esqueci-senha` → link do Supabase → `/redefinir-senha`. A tela de confirmação é a mesma exista ou não conta com aquele e-mail, para não permitir descobrir quais e-mails estão cadastrados. **Depende de configurar a URL do deploy em Authentication → URL Configuration.** **[CÓDIGO]** |
 | Planos de assinatura (trial/individual/profissional/equipe) | ⚠️ | Não há tabela de planos/billing nem integração de pagamento no schema ou no código. A arquitetura multi-tenant está pronta para isso, mas a funcionalidade de planos em si não foi implementada. **[BANCO+CÓDIGO]** |
 | Certificados de vacinação / módulo veterinário | ❌ N/A | Este projeto é agronômico, não veterinário. Não existe (e não foi criado) nenhum módulo de vacinação, animais ou certificados sanitários. Qualquer menção a isso em instruções genéricas de handoff não se aplica a este sistema. |
 
@@ -66,8 +71,9 @@ Confirmado em `package.json` **[CÓDIGO]**:
 - **Backend/dados**: Supabase (`@supabase/supabase-js ^2.110.1`, `@supabase/ssr ^0.12.0`) — Postgres, Auth, Storage, RLS
 - **PDF**: `@react-pdf/renderer ^4.5.1`
 - **Ícones**: `lucide-react ^1.23.0`
+- **Armazenamento local**: IndexedDB via camada própria em `src/lib/offline/idb.ts` — **sem dependência externa** (nada de Dexie/idb)
 - **Utilitário de classes**: `clsx ^2.1.1` (instalado, porém **sem nenhum import em `src/`** — dependência morta)
-- **Formulários/validação**: `react-hook-form ^7.81.0`, `@hookform/resolvers ^5.4.0`, `zod ^4.4.3` — **instalados mas sem nenhum import em `src/`**; todos os formulários do projeto usam Server Actions nativas com `useActionState`, não essas libs
+- **Formulários/validação**: `react-hook-form ^7.81.0`, `@hookform/resolvers ^5.4.0`, `zod ^4.4.3` — **instalados mas sem nenhum import em `src/`**; os formulários usam `FormData` nativo com o hook próprio `useFormSubmit`
 - **Datas**: `date-fns ^4.4.0` — **instalado, sem import em `src/`**
 - **Lint**: ESLint `^9` com `eslint-config-next 16.2.10`
 - **Deploy**: Vercel (via integração Git, deploy automático) **[DEPLOY]**
@@ -81,61 +87,114 @@ Scripts disponíveis em `package.json` **[CÓDIGO]**: `dev`, `build`, `start`, `
 
 ## 4. Arquitetura e estrutura do projeto
 
-Estrutura de diretórios confirmada por varredura direta de `src/` **[CÓDIGO]**:
+### 4.1 Arquitetura local-first (mudança estrutural de 2026-08-25)
+
+O app é usado por agrônomos **no campo, onde o sinal falha**. Por isso deixou de ser
+"Server Components lendo o Postgres" e passou a ser **local-first**:
+
+```
+  tela (client component)
+        │  lê/grava
+        ▼
+  IndexedDB (cópia local da organização)  ──┐
+        │  toda escrita também enfileira    │  useLiveQuery re-renderiza
+        ▼                                   │  quando algo muda
+  outbox (fila ordenada de alterações)      │
+        │  quando há conexão                │
+        ▼                                   │
+  Supabase Postgres (RLS)  ─── pull delta ──┘
+```
+
+**Regras que sustentam o desenho** (não quebrar sem entender o motivo):
+
+- **IDs são gerados no cliente** (`crypto.randomUUID()` em `repo.newId()`), não pelo banco.
+  É o que permite criar uma visita offline e, em seguida, uma ocorrência que referencia
+  essa visita — a FK já existe antes de qualquer contato com o servidor.
+- **A fila preserva a ordem de inserção** (chave autoincremental do IndexedDB). A ordem
+  carrega as dependências: pai antes de filho. `push()` **para na primeira falha**, porque
+  os itens seguintes podem depender do que falhou.
+- **Insert sobe como `upsert`** (`onConflict: "id"`). Se a gravação chegou ao servidor mas
+  a resposta se perdeu, reenviar não pode duplicar.
+- **Update envia só os campos alterados.** Se outra pessoa mexeu em campos diferentes do
+  mesmo registro, as duas edições convivem em vez de uma apagar a outra.
+- **Conflito entre aparelhos: última escrita vence**, comparando `updated_at`. Se a versão
+  do servidor for mais nova, a local é descartada. (Mesma regra do CampoVet.)
+- **A descida é por delta**, usando `updated_at` como marca d'água por tabela. **Toda tabela
+  sincronizada precisa ter `updated_at` + o trigger `trg_set_updated_at`** — `relatorios` não
+  tinha e isso quebraria o ciclo inteiro; corrigido na migration `0012`.
+- **Exclusão é sempre lógica** (`deleted_at`), nunca `DELETE` físico — inclusive na fila.
+- **Logout apaga o banco local** (`wipeOfflineDb`) além dos caches de página, para não deixar
+  dados de uma conta acessíveis a quem usar o mesmo aparelho depois.
+
+**Ao adicionar uma tabela à sincronização**: inclua o nome em `SYNCED_TABLES`
+(`src/lib/offline/idb.ts`), **suba o `DB_VERSION`** — sem isso o novo armazenamento não é
+criado nos aparelhos que já têm o app — e confirme que a tabela tem `updated_at` e trigger.
+
+### 4.2 Estrutura de diretórios
 
 ```
 Sistema-CampoAgri/
-├── middleware.ts                     # wrapper fino chamando updateSession()
-├── next.config.ts                    # config padrão, sem customizações
-├── tsconfig.json                     # strict, alias @/* -> ./src/*
-├── eslint.config.mjs
-├── postcss.config.mjs
-├── .env.example
+├── middleware.ts                     # wrapper chamando updateSession(); exclui sw.js do matcher
 ├── public/
 │   ├── manifest.webmanifest
-│   ├── sw.js
-│   └── icons/                        # 192/512/maskable-512, gerados via sharp
-├── supabase/
-│   ├── migrations/                   # 0001..0009 (ver seção 5)
-│   └── seed/seed.sql                 # script manual, não integrado a nenhum script npm
+│   ├── sw.js                         # service worker v3 (cache de páginas/assets/fotos)
+│   └── icons/
+├── supabase/migrations/              # 0001..0012 (ver seção 5)
 └── src/
     ├── app/
-    │   ├── (auth)/                   # login, cadastro, cadastro/confirme, onboarding
-    │   ├── (app)/                    # agenda, areas, configuracoes, dashboard, produtores,
-    │   │                             # propriedades, relatorios, safras, super-admin, usuarios,
-    │   │                             # visitas (+ visitas/[id]/areas/[avaliacaoId], editar,
-    │   │                             #   ocorrencias/nova, recomendacoes/nova, relatorio/route.tsx)
-    │   ├── (legal)/                  # termos, termos/aceitar, privacidade
-    │   ├── auth/callback/route.ts
-    │   ├── layout.tsx, page.tsx, globals.css, favicon.ico
+    │   ├── (auth)/                   # login, cadastro, esqueci-senha, redefinir-senha, onboarding
+    │   ├── (app)/                    # telas autenticadas — hoje quase todas são cascas finas
+    │   │                             # que renderizam um client component de components/
+    │   ├── (legal)/                  # termos, privacidade
+    │   ├── offline/                  # página de fallback do service worker (pública)
+    │   └── auth/callback/route.ts
     ├── components/
-    │   ├── agenda/ areas/ auth/ configuracoes/ dashboard/ layout/ legal/
+    │   ├── offline/                  # sync-provider, sync-status, org-context, estado-lista
+    │   ├── agenda/ areas/ auth/ configuracoes/ dashboard/ financeiro/ layout/ legal/
     │   ├── produtores/ propriedades/ pwa/ safras/ super-admin/ ui/ usuarios/ visitas/
     ├── lib/
-    │   ├── actions/    # agenda, areas, auth, fotos, legal, organization, platform,
-    │   │                 produtores, propriedades, safras, team, visitas
-    │   ├── auth/       # context.ts, permissions.ts
-    │   ├── data/       # dashboard.ts, platform.ts, property-history.ts, visit-report.ts
-    │   ├── domain/
-    │   ├── legal/      # constants.ts (TERMS_UPDATED_AT etc.)
-    │   ├── pdf/        # visit-report-document.tsx
-    │   ├── supabase/   # client.ts, server.ts, middleware.ts
-    │   └── utils/      # cn.ts, color.ts, format.ts, maps.ts, whatsapp.ts
-    └── types/database.ts             # tipos gerados automaticamente pelo Supabase
+    │   ├── offline/                  # ⬅ o coração da arquitetura atual
+    │   │   ├── idb.ts                # IndexedDB, SYNCED_TABLES, DB_VERSION, wipeOfflineDb
+    │   │   ├── outbox.ts             # fila de alterações pendentes
+    │   │   ├── sync.ts               # pull (delta) + push + upload de fotos
+    │   │   ├── repo.ts               # API local-first: listAll/getById/create/update/remove
+    │   │   ├── hooks.ts              # useLiveQuery
+    │   │   ├── events.ts             # notificação de mudança local
+    │   │   ├── use-form-submit.ts    # substitui useActionState nos formulários
+    │   │   ├── visita.ts             # join manual do fluxo de visita
+    │   │   ├── visita-actions.ts     # operações do fluxo de visita
+    │   │   └── cadastros.ts          # operações de produtor/propriedade/área/safra/agenda
+    │   ├── actions/                  # sobraram: auth, legal, organization, platform, team
+    │   ├── auth/                     # context.ts, permissions.ts
+    │   ├── data/                     # dashboard.ts, platform.ts, visit-report.ts
+    │   ├── domain/ legal/ pdf/ supabase/ utils/
+    └── types/database.ts
 ```
 
-**Padrão arquitetural observado** **[CÓDIGO]**:
-- Route groups do App Router separam áreas públicas (`(auth)`, `(legal)`) de áreas autenticadas (`(app)`), cada uma com seu próprio `layout.tsx`.
-- Mutações usam Server Actions em `src/lib/actions/*.ts`, consumidas via `useActionState` em componentes `"use client"`.
-- Leitura de dados para páginas usa funções server-side em `src/lib/data/*.ts`, chamadas diretamente dentro de Server Components.
-- `src/lib/auth/context.ts` centraliza a resolução do contexto do usuário logado (organização atual, papel, se é platform admin) — consumido por `AppShell` e pelas páginas.
-- Theming dinâmico por organização: `AppShell` (`src/components/layout/app-shell.tsx`) lê `ctx.organization.cor_primaria` e injeta `--primary`/`--primary-dark`/`--primary-foreground` como CSS custom properties inline via `style={themeStyle}`, sobrepondo os tokens estáticos de `globals.css`.
+### 4.3 Padrões atuais
+
+- **Mutação**: componente cliente → função de `lib/offline/*` → grava no IndexedDB e enfileira.
+  **Não criar novas Server Actions para dados operacionais** — elas gravariam direto no servidor
+  e o app se comportaria de forma diferente dependendo da tela. As Server Actions que restam
+  cobrem o que não faz sentido offline: autenticação, aceite de termos, configurações da
+  organização, equipe e super admin.
+- **Leitura**: `useLiveQuery(consulta, deps)` lê do IndexedDB e refaz a leitura sozinho quando
+  algo muda — seja edição do usuário ou dados recém-baixados.
+- **Estado de lista**: usar `<EstadoLista>` em vez de `<EmptyState>` direto. Ele distingue
+  "vazio de verdade" de "ainda não sincronizado" e de "navegador bloqueando o armazenamento" —
+  mostrar "nenhum registro" quando a sincronização falhou faz o usuário achar que perdeu dados.
+- **Contexto**: `useOrgCtx()` dá organização, usuário e papel no cliente (permissões continuam
+  valendo — `canDelete(ctx.role)`); `useSync()` dá estado da fila e dispara sincronização.
+- **Rotas em `(app)`** são cascas finas: recebem `params` e renderizam o client component.
+- **Theming por organização** segue como antes, via CSS custom properties injetadas no `AppShell`.
 
 ---
 
 ## 5. Banco de dados
 
-Projeto Supabase remoto `ynspkydroyncqhswjznm`. 9 migrations aplicadas, **sem drift** entre local e remoto (confirmado via `mcp__Supabase__list_migrations`) **[BANCO]**.
+Projeto Supabase remoto `ynspkydroyncqhswjznm`. **12 migrations** aplicadas, sem drift entre local e remoto **[BANCO]**.
+
+> **Regra para novas tabelas sincronizadas**: toda tabela que entrar em `SYNCED_TABLES` precisa ter `updated_at` **e** o trigger `trg_set_updated_at`. A sincronização usa essa coluna como marca d'água; sem ela a consulta falha e **nenhuma** tabela desce (foi o caso de `relatorios`, corrigido na `0012`).
 
 ### 5.1 Migrations (ordem de aplicação)
 
@@ -151,6 +210,8 @@ Projeto Supabase remoto `ynspkydroyncqhswjznm`. 9 migrations aplicadas, **sem dr
 | `0008_organization_theme_color.sql` | Adiciona `organizations.cor_primaria text not null default '#1f4d3a'` com `CHECK (cor_primaria ~ '^#[0-9a-f]{6}$')` |
 | `0009_terms_acceptance.sql` | Adiciona `profiles.termos_aceitos_em timestamptz`, `profiles.termos_versao text`; reescreve `handle_new_user()` para copiar esses campos de `raw_user_meta_data` |
 | `0010_rls_initplan_fix.sql` | Recria `org_users_select`, `profiles_insert_self`, `profiles_update_self`, `profiles_select_self_or_org` trocando `auth.uid()` por `(select auth.uid())` (corrige advisory `auth_rls_initplan`) |
+| `0011_financeiro_visitas.sql` | Cria `financeiro_visitas` (cobrança do serviço técnico: valor, desconto percentual ou fixo, status de pagamento, forma de pagamento), com 4 políticas RLS por organização e trigger de `updated_at` |
+| `0012_relatorios_updated_at.sql` | Adiciona `updated_at`/`updated_by` e o trigger em `relatorios` — era a única tabela operacional sem eles, o que impedia incluí-la na sincronização offline |
 
 ### 5.2 Modelo de dados — pontos-chave
 
@@ -240,63 +301,118 @@ Ver tabela completa na seção 2. Resumo dos módulos com implementação de pon
 
 ---
 
-## 12. Problemas e riscos pendentes (não corrigidos nesta etapa, apenas documentados)
+## 12. Problemas e riscos pendentes
 
-Por instrução explícita, **nada nesta seção foi corrigido** — apenas identificado e registrado.
+### 🔴 O mais importante
 
-1. **`auth_leaked_password_protection` desabilitado** nas configurações de Auth do Supabase (advisory de segurança, nível WARN). Recomenda-se habilitar.
-2. ~~Políticas RLS com re-avaliação por linha~~ — **Corrigido em 2026-07-11** via `supabase/migrations/0010_rls_initplan_fix.sql`: as 4 políticas (`profiles_select_self_or_org`, `profiles_update_self`, `profiles_insert_self`, `org_users_select`) foram recriadas trocando `auth.uid()` por `(select auth.uid())`. Confirmado via `get_advisors(type=performance)` que o lint `auth_rls_initplan` não aparece mais nos resultados.
-3. **Chaves estrangeiras sem índice** em praticamente todas as tabelas (advisories de performance, nível INFO) — baixo risco no volume atual, mas relevante ao escalar.
-4. **Índices não utilizados** em algumas tabelas (INFO) — esperado no volume atual, não urgente.
-5. ~~Gate de aceite de termos possivelmente incompleto~~ — **Auditado e corrigido em 2026-07-11**: o gate é de fato enforced por `requireTermsAccepted()`/`requireOrgContext()` em todas as páginas `(app)` e na quase totalidade das Server Actions. O único gap real encontrado (`platform.ts`) foi corrigido. Ver seção 6.
-6. ~~`insumos_custos` sem UI~~ — **Implementado em 2026-07-11** (ver seção 2/9). Decisão tomada com o usuário: construir UI mínima em vez de remover a tabela.
-7. ~~Sem edição de ocorrências/recomendações~~ — **Implementado em 2026-07-11** (ver seção 2/9).
-8. **Dependências mortas no `package.json`**: `react-hook-form`, `zod`, `clsx`, `date-fns`, `@hookform/resolvers` instaladas sem nenhum import em `src/`.
-9. **`manifest.webmanifest` com `theme_color` estático** (`#1f4d3a`), não reflete a cor dinâmica por organização introduzida depois.
-10. **Sem forma automatizada de rodar o seed**: `supabase/seed/seed.sql` não está integrado a nenhum script npm nem a configuração de CLI do Supabase local; foi executado manualmente via MCP (`execute_sql`).
-11. **`SUPABASE_SERVICE_ROLE_KEY` documentada mas não usada** em nenhum arquivo de código — variável de ambiente morta/aspiracional.
-12. **Dados residuais de teste na organização semeada**: uma segunda safra "Milho Verão 26/27" (criada 2026-07-08) além da safra original do `seed.sql`, provavelmente de testes manuais anteriores.
-13. **Nenhum módulo de planos/billing implementado** apesar do spec original mencionar planos trial/individual/profissional/equipe — a arquitetura multi-tenant suporta isso, mas não há tabela nem lógica de cobrança/limites por plano.
-14. **Restrição do ambiente de sandbox** (não é bug do código): chamadas HTTP diretas do container de desenvolvimento para `*.supabase.co` e para a API da Vercel são bloqueadas pelo proxy do agente (confirmado por erro explícito de proxy). Isso significa que `npm run dev` dentro deste sandbox específico não consegue autenticar de fato contra o Supabase real — um desenvolvedor numa máquina normal ou em CI não teria essa limitação. Testes de integração real foram feitos via ferramentas MCP (que rodam fora do sandbox), não via `npm run dev` local.
+1. **O ciclo completo de sincronização nunca foi testado contra o Postgres.** A camada local foi
+   verificada em navegador real (uuid no cliente, gravação no IndexedDB, entrada na fila, ordem
+   das dependências preservada), mas **nenhum registro criado offline foi visto chegando ao
+   banco**. O sandbox de desenvolvimento bloqueia `*.supabase.co` no proxy, então esse teste só
+   pode ser feito no deploy. **Fazer antes de entregar a um agrônomo em campo** — roteiro na
+   seção 16.
+2. **`auth_leaked_password_protection` desabilitado** no Supabase Auth (advisory WARN). Exige o
+   Dashboard (Authentication → Providers → Email); não há ferramenta MCP para isso.
+3. **URL de redirecionamento do Auth precisa estar configurada** para a recuperação de senha
+   funcionar: Site URL e Redirect URL (`/auth/callback`) em Authentication → URL Configuration,
+   e `NEXT_PUBLIC_SITE_URL` na Vercel. Sem isso o link do e-mail aponta para `localhost:3000`.
+
+### 🟠 Limites conhecidos da arquitetura offline
+
+4. **A primeira sincronização baixa a organização inteira** (limite de 2000 registros por tabela).
+   No volume atual é tranquilo; para uma organização com milhares de visitas e fotos, a primeira
+   carga fica lenta e pesada no celular. Caminho quando chegar lá: limitar por período
+   (ex.: últimos 6 meses) em vez de trazer tudo.
+5. **Conflito é resolvido por "última escrita vence"**, sem aviso ao usuário. Adequado porque cada
+   registro costuma ser editado por uma pessoa só, mas se duas pessoas editarem o mesmo campo,
+   uma perde silenciosamente.
+6. **Um item que falha 5 vezes sai da fila de tentativas** (`MAX_TRIES`) e fica visível no
+   indicador, mas não há tela dedicada para inspecionar ou reenviar manualmente pendências presas.
+7. **`push()` para na primeira falha** — correto para preservar dependências, mas significa que um
+   item problemático bloqueia todos os posteriores até ser resolvido.
+8. **Sem IndexedDB o app não funciona** (janela anônima, armazenamento bloqueado). Isso é
+   detectado e comunicado pelo `<EstadoLista>`, mas é uma dependência dura.
+
+### 🟡 Dívida menor
+
+9. **Dashboard, relatório PDF, configurações, usuários e super admin continuam server-side** —
+   exigem conexão. São telas de escritório; a geração de PDF depende do servidor por natureza.
+10. **Chaves estrangeiras sem índice** e **índices não utilizados** (advisories INFO) — esperado
+    no volume atual.
+11. **Dependências mortas no `package.json`**: `react-hook-form`, `zod`, `clsx`, `date-fns`,
+    `@hookform/resolvers` — instaladas sem nenhum import em `src/`.
+12. **`manifest.webmanifest` com `theme_color` estático**, não reflete a cor por organização.
+13. **Seed não automatizado**: `supabase/seed/seed.sql` não está ligado a nenhum script npm.
+14. **`SUPABASE_SERVICE_ROLE_KEY` documentada mas não usada** em nenhum arquivo.
+15. **Nenhum módulo de planos/billing**, apesar do spec original mencionar planos.
+16. **Nenhum teste automatizado no repositório.** Os testes de navegador feitos até aqui foram
+    scripts Playwright ad-hoc, não commitados.
+
+### Resolvidos (mantidos para rastreabilidade)
+
+- ~~RLS com `auth_rls_initplan`~~ — migration `0010` (2026-07-11).
+- ~~Gate de aceite de termos incompleto~~ — gap em `platform.ts` corrigido (2026-07-11).
+- ~~`insumos_custos` sem UI~~ / ~~sem edição de ocorrências e recomendações~~ — 2026-07-11.
+- ~~Service worker nunca registrava~~ — `/sw.js` era interceptado pelo middleware e respondia
+  redirect; pela especificação isso faz o registro **falhar**. Corrigido em 2026-08-25.
+- ~~Erro `invalid input syntax for type uuid: ""`~~ — o select de produtor é `disabled` na edição
+  de propriedade e campos desabilitados não entram no `FormData`. Corrigido em 2026-08-25.
+- ~~Datas e horários errados após as 21h~~ — servidor roda em UTC; passou a usar
+  `America/Sao_Paulo` (`todayInSaoPauloISO`). Corrigido em 2026-08-25.
+- ~~Conta demo com poder de super admin~~ — privilégio movido para a conta real do dono
+  (2026-08-25). A senha da demo está publicada no README.
+- ~~`relatorios` sem `updated_at`~~ — migration `0012`; sem isso, incluir a tabela na
+  sincronização quebraria o ciclo inteiro.
 
 ---
 
 ## 13. Estado atual exato
 
-- **Branch**: `claude/agronomy-saas-platform-fpxpei`
-- **Deploy de produção**: ativo na Vercel, alias estável (não usar URLs de deploy com hash específico como referência permanente)
-- **Banco de produção**: projeto Supabase `ynspkydroyncqhswjznm`, 11 migrations aplicadas sem drift (`0011_financeiro_visitas.sql` adicionada em 2026-08-21), 2 organizações reais com dados (uma semeada/demo, uma real de usuário final)
-- **Atualização de 2026-07-11**: nesta rodada, 4 dos 5 itens de dívida priorizados (seção 14) foram executados: auditoria/correção do gate de termos, correção das 4 políticas RLS `auth_rls_initplan`, implementação de UI para `insumos_custos`, e implementação de edição de ocorrências/recomendações. O único item não concluído é habilitar `auth_leaked_password_protection`, que exige acesso ao Dashboard do Supabase (não há ferramenta MCP para alterar configuração de Auth) — ação pendente do usuário.
+- **Branch**: `claude/agronomy-saas-platform-fpxpei` · último commit `a27b387`
+- **Deploy**: Vercel, alias estável `https://sistema-campo-agri.vercel.app`
+- **Banco**: Supabase `ynspkydroyncqhswjznm`, **12 migrations** aplicadas sem drift
+- **Banco local**: IndexedDB `campoagri-offline`, **DB_VERSION 2**, 14 tabelas sincronizadas
+- **Qualidade**: `npm run lint` com 0 erros e 0 avisos; `next build` limpo
+- **Contas**: `irezende136@gmail.com` (owner + único super admin da plataforma) e
+  `demo@campoagri.app` (demo, senha no README, sem privilégio de plataforma)
 
-- **Atualização de 2026-08-21** (paridade com o sistema veterinário CampoVet + offline):
-  - **Módulo Financeiro** (novo): tabela `financeiro_visitas` (migration `0011`, RLS por organização validada — 4 políticas, nenhuma permissiva), Server Actions em `src/lib/actions/financeiro.ts` com desconto percentual/fixo que nunca deixa o total negativo (regra herdada do CampoVet), seção "Financeiro da visita" em `visitas/[id]` e página `/financeiro` com filtros por status e totais (a receber / recebido no mês).
-  - **Dashboard**: central de alertas (visitas agendadas em atraso, recomendações com prazo vencido), gráfico de barras de visitas por mês (6 meses, sem biblioteca externa) e card "A receber".
-  - **Agenda**: agrupada por data (Atrasadas / Hoje / Amanhã / dia da semana), atrasadas destacadas, botão WhatsApp com mensagem de confirmação pré-preenchida.
-  - **Modo offline (PWA)**: `public/sw.js` reescrito (v2) — cache-first para assets do build e fotos do Storage, network-first com timeout e fallback em cache para navegações/RSC, página `/offline` precacheada, banner de "sem conexão" global. **Somente leitura**: criar/editar exige conexão. Logout limpa os caches de páginas e fotos.
-  - **Correção de timezone**: `formatDateTimeBR` e os cálculos de "hoje" agora usam `America/Sao_Paulo` (o servidor da Vercel roda em UTC e exibia horários/datas errados a partir das 21h). Novo helper `todayInSaoPauloISO()`.
-  - Lint zerado (0 erros, 0 avisos) e build de produção limpo após todas as mudanças.
+**O que mudou em 2026-08-25** (a rodada mais estrutural até aqui):
+
+1. **Paridade com o CampoVet**: módulo financeiro, alertas e gráfico no dashboard, agenda
+   agrupada com WhatsApp de confirmação.
+2. **Modo offline completo (local-first)** — reescrita da camada de dados. Ver seção 4.
+3. **Recuperação de senha por e-mail** — não existia; quem esquecia a senha ficava trancado fora
+   e só o dono do projeto conseguia destravar pelo Dashboard.
+4. **Captura de GPS mais precisa**: `getCurrentPosition` devolve a primeira leitura, que no
+   celular costuma vir da rede (centenas de metros de erro). Passou a usar `watchPosition`,
+   guardando sempre a leitura mais precisa até ±10 m, e **mostra a precisão na tela**.
+5. **Correções**: service worker que nunca registrava, uuid vazio ao editar propriedade,
+   timezone, fallback offline com `Vary`, e 5xx sendo devolvido em vez de usar o cache.
+6. **Limpeza**: 10 Server Actions e 10 componentes removidos após a migração.
 
 ---
 
 ## 14. Próximos passos priorizados
 
-**P0 — Crítico / bloqueante de conformidade ou segurança**
-1. ~~Auditar e corrigir o enforcement do gate de aceite de termos~~ — concluído em 2026-07-11 (item 12.5).
-2. Habilitar `auth_leaked_password_protection` no Supabase Auth (item 12.1).
+**P0**
+1. **Testar o ciclo de sincronização ponta a ponta** no deploy (item 12.1, roteiro na seção 16).
+2. Habilitar `auth_leaked_password_protection` no Dashboard do Supabase (item 12.2).
+3. Confirmar a URL de redirecionamento do Auth e `NEXT_PUBLIC_SITE_URL` (item 12.3).
 
-**P1 — Alto impacto, baixo risco**
-3. ~~Corrigir as 4 políticas RLS com `auth_rls_initplan`~~ — concluído em 2026-07-11 (item 12.2).
-4. ~~Decidir o destino de `insumos_custos`~~ — concluído em 2026-07-11: UI mínima implementada (item 12.6).
+**P1**
+4. Tela de pendências: listar itens presos na fila, com o erro e opção de reenviar ou descartar
+   (itens 12.6 e 12.7). Hoje o usuário só vê o número no cabeçalho.
+5. Commitar uma suíte mínima de testes de navegador cobrindo o ciclo offline → sincronização
+   (item 12.16). É a rede de segurança que falta para mexer nessa camada com confiança.
 
-**P2 — Melhoria funcional esperada pelo usuário**
-5. ~~Implementar edição de ocorrências e recomendações~~ — concluído em 2026-07-11 (item 12.7).
-6. Atualizar `manifest.webmanifest` para refletir a cor dinâmica da organização, ou documentar que o `theme_color` é intencionalmente fixo (item 12.9).
+**P2**
+6. Limitar a sincronização por período quando o volume crescer (item 12.4).
+7. Converter o dashboard para ler do banco local, para ser útil offline (item 12.9).
+8. Remover dependências mortas (item 12.11) e resolver `theme_color` do manifest (item 12.12).
 
-**P3 — Limpeza técnica / dívida menor**
-7. Remover dependências não usadas (`react-hook-form`, `zod`, `clsx`, `date-fns`, `@hookform/resolvers`) ou passar a utilizá-las de fato (item 12.8).
-8. Adicionar índices nas chaves estrangeiras mais consultadas conforme o volume de dados crescer (item 12.3).
-9. Automatizar a execução do seed (script npm ou configuração de CLI do Supabase local) (item 12.10).
-10. Limpar dados residuais de teste na organização semeada e decidir se `SUPABASE_SERVICE_ROLE_KEY` deve ser removida do `.env.example` ou passar a ser usada intencionalmente (itens 12.11, 12.12).
+**P3**
+9. Índices em FKs conforme o volume crescer; automatizar o seed; decidir sobre
+   `SUPABASE_SERVICE_ROLE_KEY` (itens 12.10, 12.13, 12.14).
 
 ---
 
@@ -315,7 +431,7 @@ npm run lint                 # ESLint
 
 Variáveis obrigatórias em `.env.local` (nomes apenas, ver seção 5.3): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL`.
 
-Schema do banco: as migrations em `supabase/migrations/0001` a `0009` devem ser aplicadas, em ordem, contra um projeto Supabase (via CLI do Supabase ou via MCP `apply_migration`). Não há configuração de CLI local (`supabase/config.toml`) neste repositório — a aplicação de migrations foi feita manualmente via MCP durante o desenvolvimento.
+Schema do banco: as migrations em `supabase/migrations/0001` a `0012` devem ser aplicadas, em ordem, contra um projeto Supabase (via CLI do Supabase ou via MCP `apply_migration`). Não há configuração de CLI local (`supabase/config.toml`) neste repositório — a aplicação de migrations foi feita manualmente via MCP durante o desenvolvimento.
 
 **Nota de ambiente**: dentro deste sandbox específico de desenvolvimento, `npm run dev` não consegue alcançar `*.supabase.co` por política de rede do proxy — isso é uma limitação do ambiente de execução, não do projeto. Num ambiente normal (máquina local, CI, ou a própria Vercel), essa restrição não existe.
 
@@ -323,29 +439,60 @@ Schema do banco: as migrations em `supabase/migrations/0001` a `0009` devem ser 
 
 ## 16. Checklist de validação
 
-- [ ] `npm install` sem erros
-- [ ] `npm run lint` sem erros
-- [ ] `npm run build` sem erros
-- [ ] Login com usuário existente funciona e redireciona para `/dashboard`
-- [ ] Cadastro de novo usuário → onboarding → criação de organização funciona
-- [ ] Aceite de termos é exigido e gravado (`profiles.termos_aceitos_em`/`termos_versao`) — **conferir se é realmente bloqueante em todas as rotas, ver item 12.5**
-- [ ] CRUD de produtores, propriedades, áreas, safras funcionando
-- [ ] Criar, editar e excluir uma visita
-- [ ] Adicionar avaliação de área, ocorrência e recomendação a uma visita
-- [ ] Upload de foto em uma visita
-- [ ] Geração do relatório de visita em PDF sem erros
-- [ ] Botão de WhatsApp na tela do produtor abre com número correto
-- [ ] Botões de Waze/Maps na propriedade abrem com coordenadas corretas
-- [ ] Alterar cor primária e logo da organização em Configurações reflete no `AppShell` e no PDF
-- [ ] Usuário sem permissão de admin não consegue executar ações restritas (testar RLS/permissions)
-- [ ] Super Admin consegue acessar `/super-admin` e usuário comum não consegue
-- [ ] `mcp__Supabase__get_advisors` (security e performance) revisado antes de qualquer nova feature em produção
+### Básico
+- [ ] `npm install`, `npm run lint` e `npm run build` sem erros
+- [ ] Login funciona e redireciona para `/dashboard`
+- [ ] Cadastro → onboarding → criação de organização funciona
+- [ ] Aceite de termos é exigido e gravado
+- [ ] "Esqueci minha senha" envia o e-mail e o link cai em `/redefinir-senha`
+- [ ] Usuário sem permissão não executa ações restritas; super admin acessa `/super-admin`
+- [ ] Advisors do Supabase (security e performance) revisados antes de subir feature nova
+
+### ⚠️ Ciclo offline → sincronização (o teste que ainda não foi feito)
+
+Fazer no deploy, num celular real. É o item de maior risco em aberto.
+
+1. [ ] Abrir o app **online** e deixar sincronizar (indicador no cabeçalho fica "Tudo sincronizado")
+2. [ ] Ativar o **modo avião**
+3. [ ] Cadastrar um produtor → uma propriedade nele → uma visita → uma ocorrência → uma foto
+4. [ ] Conferir que tudo aparece nas listagens com o ícone de "ainda não enviado" e que o
+       indicador mostra o número de pendências
+5. [ ] Fechar e reabrir o app ainda offline — os dados devem continuar lá
+6. [ ] Reconectar e aguardar a sincronização
+7. [ ] **Conferir no Supabase** que os 5 registros chegaram, com as FKs ligando corretamente
+       (a ocorrência apontando para a visita, a visita para a propriedade, a propriedade para o produtor)
+8. [ ] Conferir que a foto subiu para o Storage e que a miniatura deixou de mostrar "no aparelho"
+9. [ ] Abrir o histórico da propriedade e verificar se a visita aparece na linha do tempo
+10. [ ] Repetir num aparelho que **já tinha o app aberto antes**, para confirmar que a subida do
+        `DB_VERSION` para 2 acontece sem perder a fila de pendências
+
+Se algo travar, o erro fica registrado no item da fila e o indicador mostra a contagem.
+
+### Uso normal
+- [ ] CRUD de produtores, propriedades, áreas, safras
+- [ ] Criar, editar, finalizar e excluir uma visita
+- [ ] Avaliação de área, ocorrência e recomendação dentro da visita
+- [ ] Lançar cobrança na visita e conferir os totais em `/financeiro`
+- [ ] Relatório de visita em PDF sem erros
+- [ ] WhatsApp do produtor e da agenda abrem com número e mensagem corretos
+- [ ] Waze/Maps abrem com as coordenadas certas; captura de GPS mostra a precisão em metros
+- [ ] Cor primária e logo da organização refletem no `AppShell` e no PDF
+- [ ] Logout limpa o banco local (abrir de novo deve pedir sincronização, sem mostrar dados da conta anterior)
 
 ---
 
 ## 17. Instruções obrigatórias para o próximo Claude Code
 
-- Leia integralmente este documento antes de modificar o projeto.
+- Leia integralmente este documento antes de modificar o projeto — **em especial a seção 4**,
+  porque a arquitetura de dados mudou por completo em 2026-08-25 e o padrão antigo (Server Actions
+  + Server Components lendo o Postgres) não vale mais para dados operacionais.
+- **Não crie Server Actions novas para dados operacionais.** Toda escrita passa pela camada
+  `src/lib/offline/` (grava no IndexedDB e enfileira). Criar um caminho paralelo que grava direto
+  no servidor faz o app se comportar de formas diferentes dependendo da tela.
+- **Toda tabela nova que precisar funcionar offline** exige: `updated_at` + trigger no Postgres,
+  entrada em `SYNCED_TABLES` e **bump do `DB_VERSION`** em `src/lib/offline/idb.ts`.
+- **Em listagens, use `<EstadoLista>`**, não `<EmptyState>` direto — ele distingue "vazio" de
+  "ainda não sincronizado" e de "armazenamento bloqueado".
 - Não repita trabalho já feito; confirme sempre no código antes de assumir que algo não existe.
 - Não presuma que uma funcionalidade mencionada em conversas anteriores foi implementada; verifique diretamente nos arquivos e no banco de dados.
 - Preserve os padrões arquiteturais e de nomenclatura já estabelecidos no projeto.
@@ -368,12 +515,20 @@ português para engenheiros agrônomos gerenciarem visitas técnicas a proprieda
 rurais (Next.js 16 + React 19 + TypeScript + Tailwind v4 + Supabase/Postgres com RLS,
 deploy na Vercel).
 
+O app é **local-first**: as telas leem e gravam num banco local (IndexedDB) e uma fila
+sincroniza com o Supabase, para funcionar sem sinal no campo. A camada está em
+src/lib/offline/. Quase não existem mais Server Actions para dados operacionais.
+
 Antes de qualquer alteração, leia o arquivo PROJECT_HANDOFF.md na raiz do repositório
 por completo. Ele contém o estado real e verificado do projeto (não confie em resumos
 anteriores de chat): escopo funcional com status de conclusão por funcionalidade,
 arquitetura, modelo de banco de dados, regras de negócio, histórico de decisões e
 bugs corrigidos, riscos pendentes (seção 12) e próximos passos priorizados P0-P3
-(seção 14).
+(seção 14). A seção 4 explica a arquitetura offline e as regras que a sustentam —
+leia antes de escrever qualquer código que grave dados.
+
+Risco em aberto mais importante: o ciclo completo offline → sincronização nunca foi
+testado contra o Postgres real (item 12.1, roteiro na seção 16).
 
 Branch de trabalho: claude/agronomy-saas-platform-fpxpei.
 
