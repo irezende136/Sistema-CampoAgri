@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import { useFormSubmit } from "@/lib/offline/use-form-submit";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/field";
-import type { ActionState } from "@/lib/actions/auth";
 import type { Database } from "@/types/database";
 import { toDateInputValue } from "@/lib/utils/format";
 
@@ -30,18 +29,18 @@ const PRIORIDADES = [
 
 export function RecomendacaoForm({
   areas,
-  action,
+  aoSalvar,
   recomendacao: recomendacaoRow,
 }: {
   areas: { id: string; nome: string }[];
-  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  aoSalvar: (dados: FormData) => Promise<void>;
   recomendacao?: Recomendacao | null;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const { onSubmit, salvando, erro } = useFormSubmit(aoSalvar);
   const isEdit = Boolean(recomendacaoRow);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4">
       <FieldGroup label="Área (opcional)" htmlFor="area_id">
         <Select id="area_id" name="area_id" defaultValue={recomendacaoRow?.area_id ?? ""}>
           <option value="">Recomendação geral da propriedade</option>
@@ -104,9 +103,9 @@ export function RecomendacaoForm({
         <Textarea id="observacoes" name="observacoes" defaultValue={recomendacaoRow?.observacoes ?? ""} />
       </FieldGroup>
 
-      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-        {pending ? "Salvando..." : isEdit ? "Salvar alterações" : "Registrar recomendação"}
+      {erro && <p className="text-sm text-danger">{erro}</p>}
+      <Button type="submit" disabled={salvando} className="w-full sm:w-auto">
+        {salvando ? "Salvando..." : isEdit ? "Salvar alterações" : "Registrar recomendação"}
       </Button>
     </form>
   );

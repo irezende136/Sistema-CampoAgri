@@ -1,24 +1,23 @@
 "use client";
 
-import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import { useFormSubmit } from "@/lib/offline/use-form-submit";
 import { FieldGroup, Input, Textarea } from "@/components/ui/field";
 import type { Database } from "@/types/database";
-import type { ActionState } from "@/lib/actions/auth";
 
 type Avaliacao = Database["public"]["Tables"]["avaliacoes_area"]["Row"];
 
 export function AvaliacaoForm({
   avaliacao,
-  action,
+  aoSalvar,
 }: {
   avaliacao: Avaliacao;
-  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  aoSalvar: (dados: FormData) => Promise<void>;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const { onSubmit, salvando, erro } = useFormSubmit(aoSalvar);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FieldGroup label="Estádio fenológico" htmlFor="estadio_fenologico">
           <Input id="estadio_fenologico" name="estadio_fenologico" defaultValue={avaliacao.estadio_fenologico ?? ""} placeholder="V4, R1..." />
@@ -72,9 +71,9 @@ export function AvaliacaoForm({
         <Textarea id="observacoes_gerais" name="observacoes_gerais" defaultValue={avaliacao.observacoes_gerais ?? ""} />
       </FieldGroup>
 
-      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-        {pending ? "Salvando..." : "Salvar avaliação"}
+      {erro && <p className="text-sm text-danger">{erro}</p>}
+      <Button type="submit" disabled={salvando} className="w-full sm:w-auto">
+        {salvando ? "Salvando..." : "Salvar avaliação"}
       </Button>
     </form>
   );

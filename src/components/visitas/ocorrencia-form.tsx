@@ -1,10 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import { useFormSubmit } from "@/lib/offline/use-form-submit";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/field";
 import { TIPOS_OCORRENCIA } from "@/lib/domain/ocorrencia-tipos";
-import type { ActionState } from "@/lib/actions/auth";
 import type { Database } from "@/types/database";
 import { toDateInputValue } from "@/lib/utils/format";
 
@@ -19,18 +18,18 @@ const SEVERIDADES = [
 
 export function OcorrenciaForm({
   areas,
-  action,
+  aoSalvar,
   ocorrencia,
 }: {
   areas: { id: string; nome: string }[];
-  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  aoSalvar: (dados: FormData) => Promise<void>;
   ocorrencia?: Ocorrencia | null;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const { onSubmit, salvando, erro } = useFormSubmit(aoSalvar);
   const isEdit = Boolean(ocorrencia);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4">
       <FieldGroup label="Área" htmlFor="area_id">
         <Select id="area_id" name="area_id" required defaultValue={ocorrencia?.area_id ?? ""}>
           <option value="" disabled>
@@ -105,9 +104,9 @@ export function OcorrenciaForm({
         </FieldGroup>
       </div>
 
-      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-        {pending ? "Salvando..." : isEdit ? "Salvar alterações" : "Registrar ocorrência"}
+      {erro && <p className="text-sm text-danger">{erro}</p>}
+      <Button type="submit" disabled={salvando} className="w-full sm:w-auto">
+        {salvando ? "Salvando..." : isEdit ? "Salvar alterações" : "Registrar ocorrência"}
       </Button>
     </form>
   );
