@@ -1,20 +1,20 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useFormSubmit } from "@/lib/offline/use-form-submit";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/field";
-import type { ActionState } from "@/lib/actions/auth";
 
 type Produtor = { id: string; nome: string; propriedades: { id: string; nome: string }[] };
 
 export function AgendaForm({
   produtores,
-  action,
+  aoSalvar,
 }: {
   produtores: Produtor[];
-  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  aoSalvar: (dados: FormData) => Promise<void>;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const { onSubmit, salvando, erro } = useFormSubmit(aoSalvar);
   const [produtorId, setProdutorId] = useState("");
 
   const propriedades = useMemo(
@@ -23,7 +23,7 @@ export function AgendaForm({
   );
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4">
       <FieldGroup label="Produtor" htmlFor="produtor_id">
         <Select id="produtor_id" name="produtor_id" required value={produtorId} onChange={(e) => setProdutorId(e.target.value)}>
           <option value="" disabled>
@@ -67,9 +67,9 @@ export function AgendaForm({
         <Textarea id="observacoes" name="observacoes" />
       </FieldGroup>
 
-      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-        {pending ? "Salvando..." : "Agendar visita"}
+      {erro && <p className="text-sm text-danger">{erro}</p>}
+      <Button type="submit" disabled={salvando} className="w-full sm:w-auto">
+        {salvando ? "Salvando..." : "Agendar visita"}
       </Button>
     </form>
   );
