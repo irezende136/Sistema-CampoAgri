@@ -1,6 +1,6 @@
 "use client";
 
-import { WifiOff, RotateCw } from "lucide-react";
+import { WifiOff, RotateCw, ClipboardList } from "lucide-react";
 
 // Página de fallback servida pelo service worker quando não há conexão
 // e a página pedida não está no cache. Precisa ser estática e pública.
@@ -11,21 +11,35 @@ export default function OfflinePage() {
         <div className="mx-auto h-14 w-14 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
           <WifiOff size={26} />
         </div>
-        <h1 className="text-lg font-semibold">Você está sem conexão</h1>
+        <h1 className="text-lg font-semibold">Esta tela ainda não foi salva</h1>
         <p className="text-sm text-muted-foreground">
-          Esta página ainda não foi salva no seu dispositivo. As telas que você já abriu
-          (dashboard, produtores, visitas, agenda) continuam disponíveis para consulta offline.
+          Você está sem conexão e esta tela específica ainda não tinha sido aberta neste
+          aparelho. Suas outras telas continuam funcionando normalmente.
         </p>
-        <p className="text-xs text-muted-foreground">
-          Para registrar ou editar dados é preciso estar conectado.
+        <p className="text-sm text-muted-foreground">
+          <strong className="text-foreground">Você pode continuar trabalhando:</strong> registrar
+          visitas, ocorrências, fotos e cadastros funciona sem sinal. Tudo fica salvo no aparelho
+          e sobe sozinho quando a conexão voltar.
         </p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 h-11 text-sm font-medium"
-        >
-          <RotateCw size={16} /> Tentar novamente
-        </button>
+        <div className="flex flex-col gap-2 pt-1">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages --
+              navegação completa de propósito: passa pelo service worker e acha o
+              HTML salvo. A navegação do Next buscaria dados que podem não estar
+              em cache e falharia sem sinal. */}
+          <a
+            href="/visitas"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 h-11 text-sm font-medium"
+          >
+            <ClipboardList size={16} /> Ir para as visitas
+          </a>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 h-11 text-sm font-medium"
+          >
+            <RotateCw size={16} /> Tentar novamente
+          </button>
+        </div>
       </div>
     </div>
   );

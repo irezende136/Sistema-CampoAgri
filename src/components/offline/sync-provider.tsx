@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { syncNow, getLastSyncAt } from "@/lib/offline/sync";
 import { countPending } from "@/lib/offline/outbox";
+import { prepararTelasOffline } from "@/lib/offline/precache";
 import type { Ctx } from "@/lib/offline/repo";
 
 type SyncState = {
@@ -72,6 +73,10 @@ export function SyncProvider({
       if (!r.ok && r.erro && r.erro !== "sem conexão") setErro(r.erro);
       setUltimaSync(await getLastSyncAt());
       await recarregarPendentes();
+
+      // Com os dados no aparelho, garante que as telas para vê-los também
+      // estejam salvas — senão o app fica sem sinal com dados e sem telas.
+      if (r.ok) void prepararTelasOffline();
     } finally {
       emAndamento.current = false;
       setSincronizando(false);
