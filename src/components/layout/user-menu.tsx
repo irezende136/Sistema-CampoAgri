@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "@/lib/actions/auth";
+import { wipeOfflineDb } from "@/lib/offline/idb";
 import { ROLE_LABELS } from "@/lib/auth/permissions";
 import type { OrgRole } from "@/lib/auth/context";
 import { LogOut, ChevronDown } from "lucide-react";
@@ -45,6 +46,8 @@ export function UserMenu({ email, role }: { email: string | null; role: OrgRole 
                   keys.filter((k) => k.startsWith("campoagri-pages") || k.startsWith("campoagri-images")).forEach((k) => caches.delete(k));
                 });
               }
+              // Apaga tambem a copia local dos dados (IndexedDB).
+              void wipeOfflineDb();
             }}
           >
             <button

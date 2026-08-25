@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { PrimarySidebarNav, SecondarySidebarNav, BottomNav } from "@/components/layout/nav-lists";
 import { UserMenu } from "@/components/layout/user-menu";
+import { SyncProvider } from "@/components/offline/sync-provider";
+import { SyncStatus } from "@/components/offline/sync-status";
 import { OrgMark } from "@/components/layout/org-mark";
 import { darkenHex, readableTextColor } from "@/lib/utils/color";
 import type { OrgContext } from "@/lib/auth/context";
@@ -23,6 +25,7 @@ export function AppShell({
   } as React.CSSProperties;
 
   return (
+    <SyncProvider organizationId={ctx.organizationId} userId={ctx.userId}>
     <div className="min-h-screen bg-background" style={themeStyle}>
       <div className="flex">
         <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 border-r border-border h-screen sticky top-0 p-4">
@@ -64,6 +67,7 @@ export function AppShell({
               </span>
             </div>
             <div className="flex-1" />
+            <SyncStatus />
             <UserMenu email={ctx.email} role={ctx.role} />
           </header>
 
@@ -81,5 +85,6 @@ export function AppShell({
         <Plus size={26} />
       </Link>
     </div>
+    </SyncProvider>
   );
 }
