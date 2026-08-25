@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Phone, MapPin, Pencil, CloudUpload, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -127,6 +127,9 @@ export function NovoProdutorPage() {
   const ctx = useOrgCtx();
   const { recarregarPendentes, sincronizar } = useSync();
   const router = useRouter();
+  // Quem chegou aqui tentando iniciar uma visita continua o fluxo em vez de
+  // ser largado na tela do produtor.
+  const noFluxoDeVisita = useSearchParams().get("fluxo") === "visita";
 
   async function salvar(dados: FormData) {
     const campos = camposDoFormulario(dados);
@@ -135,12 +138,20 @@ export function NovoProdutorPage() {
     const produtor = await criarProdutorLocal(ctx, campos);
     await recarregarPendentes();
     if (navigator.onLine) void sincronizar();
-    router.push(`/produtores/${produtor.id}`);
+    router.push(
+      noFluxoDeVisita
+        ? `/propriedades/novo?produtor_id=${produtor.id}&fluxo=visita`
+        : `/produtores/${produtor.id}`
+    );
   }
 
   return (
     <div>
-      <PageHeader title="Novo produtor" backHref="/produtores" />
+      <PageHeader
+        title="Novo produtor"
+        description={noFluxoDeVisita ? "Passo 1 de 2 para iniciar a visita" : undefined}
+        backHref="/produtores"
+      />
       <Card>
         <CardContent>
           <ProdutorForm aoSalvar={salvar} />

@@ -47,10 +47,10 @@ function EscolherProdutor() {
         <Carregando />
       ) : data.length === 0 ? (
         <EmptyState
-          title="Nenhum produtor cadastrado"
-          description="Cadastre um produtor antes de iniciar uma visita."
-          actionLabel="Novo produtor"
-          actionHref="/produtores/novo"
+          title="Cadastre um produtor primeiro"
+          description="A visita é sempre feita numa propriedade de um produtor. Vamos cadastrar os dois agora — leva menos de um minuto e você volta direto para a visita."
+          actionLabel="Cadastrar produtor"
+          actionHref="/produtores/novo?fluxo=visita"
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -91,8 +91,8 @@ function EscolherPropriedade({ produtorId }: { produtorId: string }) {
         <EmptyState
           title="Nenhuma propriedade cadastrada"
           description="Cadastre uma propriedade para este produtor antes de iniciar a visita."
-          actionLabel="Nova propriedade"
-          actionHref={`/propriedades/novo?produtor_id=${produtorId}`}
+          actionLabel="Cadastrar propriedade"
+          actionHref={`/propriedades/novo?produtor_id=${produtorId}&fluxo=visita`}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

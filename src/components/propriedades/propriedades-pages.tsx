@@ -136,6 +136,7 @@ export function NovaPropriedadePage() {
   const router = useRouter();
   const params = useSearchParams();
   const produtorPadrao = params.get("produtor_id") ?? undefined;
+  const noFluxoDeVisita = params.get("fluxo") === "visita";
 
   const { data } = useLiveQuery(() => listAll<{ id: string; nome: string }>("produtores"), []);
 
@@ -147,12 +148,20 @@ export function NovaPropriedadePage() {
     const prop = await criarPropriedadeLocal(ctx, c);
     await recarregarPendentes();
     if (navigator.onLine) void sincronizar();
-    router.push(`/propriedades/${prop.id}`);
+    router.push(
+      noFluxoDeVisita
+        ? `/visitas/nova?produtor_id=${c.produtor_id}&propriedade_id=${prop.id}`
+        : `/propriedades/${prop.id}`
+    );
   }
 
   return (
     <div>
-      <PageHeader title="Nova propriedade" backHref="/propriedades" />
+      <PageHeader
+        title="Nova propriedade"
+        description={noFluxoDeVisita ? "Passo 2 de 2 para iniciar a visita" : undefined}
+        backHref="/propriedades"
+      />
       <Card>
         <CardContent>
           <PropriedadeForm
