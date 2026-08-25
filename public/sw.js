@@ -8,7 +8,7 @@
 // - Fotos do Supabase Storage: cache-first com limite de entradas.
 // - Nada de POST/ações: criar/editar exige conexão (o formulário mostra erro).
 
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL_CACHE = `campoagri-shell-${VERSION}`;
 const PAGES_CACHE = `campoagri-pages-${VERSION}`;
 const ASSETS_CACHE = `campoagri-assets-${VERSION}`;
@@ -79,13 +79,23 @@ async function networkFirst(event, cacheName, { fallbackToOffline = false, maxEn
     const response = await fetchWithTimeout(event.request, NETWORK_TIMEOUT_MS);
     if (response && response.ok) {
       event.waitUntil(cachePut(cacheName, event.request, response.clone(), maxEntries));
+      return response;
+    }
+    // Erro do servidor (5xx): se temos uma cópia salva, ela é melhor que a
+    // tela de erro. Acontece em sinal fraco ou instabilidade do backend.
+    if (response && response.status >= 500) {
+      const cached = await caches.match(event.request);
+      if (cached) return cached;
     }
     return response;
   } catch {
     const cached = await caches.match(event.request);
     if (cached) return cached;
     if (fallbackToOffline) {
-      const offline = await caches.match(OFFLINE_URL);
+      // ignoreVary: as respostas do Next trazem header Vary (RSC etc.). Sem
+      // isso, o match falha e o usuário vê a tela de erro do navegador em vez
+      // da nossa página de offline.
+      const offline = await caches.match(OFFLINE_URL, { ignoreVary: true });
       if (offline) return offline;
     }
     return Response.error();
