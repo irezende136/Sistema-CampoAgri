@@ -8,7 +8,7 @@
 // - Fotos do Supabase Storage: cache-first com limite de entradas.
 // - Nada de POST/ações: criar/editar exige conexão (o formulário mostra erro).
 
-const VERSION = "v3";
+const VERSION = "v4";
 const SHELL_CACHE = `campoagri-shell-${VERSION}`;
 const PAGES_CACHE = `campoagri-pages-${VERSION}`;
 const ASSETS_CACHE = `campoagri-assets-${VERSION}`;
@@ -73,6 +73,21 @@ async function cachePut(cacheName, request, response, maxEntries) {
   }
 }
 
+/**
+ * Busca no cache ignorando o header Vary.
+ *
+ * As respostas do Next trazem `Vary: RSC, Next-Router-State-Tree,
+ * Next-Router-Prefetch`. A cópia salva costuma vir de um prefetch, e quando o
+ * usuário de fato navega os cabeçalhos são outros — respeitando o Vary o match
+ * falha e o app fica inutilizável sem sinal, mesmo com tudo em cache.
+ *
+ * Não usamos ignoreSearch: o payload RSC mora na mesma rota com `?_rsc=...`, e
+ * ignorar a query faria uma navegação receber RSC cru em vez do HTML.
+ */
+function buscarNoCache(request) {
+  return caches.match(request, { ignoreVary: true });
+}
+
 // Network-first: tenta rede (com timeout), guarda cópia e cai para o cache.
 async function networkFirst(event, cacheName, { fallbackToOffline = false, maxEntries } = {}) {
   try {
@@ -84,27 +99,26 @@ async function networkFirst(event, cacheName, { fallbackToOffline = false, maxEn
     // Erro do servidor (5xx): se temos uma cópia salva, ela é melhor que a
     // tela de erro. Acontece em sinal fraco ou instabilidade do backend.
     if (response && response.status >= 500) {
-      const cached = await caches.match(event.request);
+      const cached = await buscarNoCache(event.request);
       if (cached) return cached;
     }
     return response;
   } catch {
-    const cached = await caches.match(event.request);
+    const cached = await buscarNoCache(event.request);
     if (cached) return cached;
     if (fallbackToOffline) {
-      // ignoreVary: as respostas do Next trazem header Vary (RSC etc.). Sem
-      // isso, o match falha e o usuário vê a tela de erro do navegador em vez
-      // da nossa página de offline.
       const offline = await caches.match(OFFLINE_URL, { ignoreVary: true });
       if (offline) return offline;
     }
+    // Miss num payload RSC: devolver erro faz o Next cair para navegação
+    // completa, que passa pelo handler de navegação e acha o HTML em cache.
     return Response.error();
   }
 }
 
 // Cache-first: serve do cache e busca na rede apenas se faltar.
 async function cacheFirst(event, cacheName, { maxEntries } = {}) {
-  const cached = await caches.match(event.request);
+  const cached = await buscarNoCache(event.request);
   if (cached) return cached;
   const response = await fetch(event.request);
   if (response && (response.ok || response.type === "opaque")) {
