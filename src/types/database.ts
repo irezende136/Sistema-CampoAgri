@@ -1246,6 +1246,8 @@ export type Database = {
           propriedade_id: string
           status: string
           storage_path: string | null
+          updated_at: string
+          updated_by: string | null
           visita_id: string
         }
         Insert: {
@@ -1260,6 +1262,8 @@ export type Database = {
           propriedade_id: string
           status?: string
           storage_path?: string | null
+          updated_at?: string
+          updated_by?: string | null
           visita_id: string
         }
         Update: {
@@ -1274,6 +1278,8 @@ export type Database = {
           propriedade_id?: string
           status?: string
           storage_path?: string | null
+          updated_at?: string
+          updated_by?: string | null
           visita_id?: string
         }
         Relationships: [

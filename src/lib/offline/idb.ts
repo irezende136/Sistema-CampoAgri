@@ -3,7 +3,9 @@
 // sem sinal, além da fila de alterações pendentes (outbox).
 
 export const DB_NAME = "campoagri-offline";
-export const DB_VERSION = 1;
+// v2: incluiu "relatorios" na sincronização. Subir a versão é o que faz o
+// navegador criar o novo armazenamento nos aparelhos que já tinham a v1.
+export const DB_VERSION = 2;
 
 // Tabelas espelhadas localmente. A ordem importa no envio: pais antes de
 // filhos, para que uma FK criada offline exista quando o filho subir.
@@ -21,6 +23,9 @@ export const SYNCED_TABLES = [
   "agenda_visitas",
   "financeiro_visitas",
   "fotos",
+  // Somente leitura: o PDF é gerado no servidor. Fica local para o histórico
+  // da propriedade funcionar sem sinal.
+  "relatorios",
 ] as const;
 
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
