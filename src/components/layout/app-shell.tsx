@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { PrimarySidebarNav, SecondarySidebarNav, BottomNav } from "@/components/layout/nav-lists";
 import { UserMenu } from "@/components/layout/user-menu";
 import { SyncProvider } from "@/components/offline/sync-provider";
+import { OrgContextProvider } from "@/components/offline/org-context";
 import { SyncStatus } from "@/components/offline/sync-status";
 import { OrgMark } from "@/components/layout/org-mark";
 import { darkenHex, readableTextColor } from "@/lib/utils/color";
@@ -25,6 +26,9 @@ export function AppShell({
   } as React.CSSProperties;
 
   return (
+    <OrgContextProvider
+      value={{ organizationId: ctx.organizationId, userId: ctx.userId, role: ctx.role, email: ctx.email }}
+    >
     <SyncProvider organizationId={ctx.organizationId} userId={ctx.userId}>
     <div className="min-h-screen bg-background" style={themeStyle}>
       <div className="flex">
@@ -86,5 +90,6 @@ export function AppShell({
       </Link>
     </div>
     </SyncProvider>
+    </OrgContextProvider>
   );
 }

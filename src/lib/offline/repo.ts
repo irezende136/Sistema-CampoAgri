@@ -1,5 +1,6 @@
 import { idbGet, idbGetAll, idbPut, idbDelete, BLOB_STORE, type SyncedTable } from "./idb";
 import { enqueue } from "./outbox";
+import { emitLocalChange } from "./events";
 
 type Row = Record<string, unknown> & {
   id: string;
@@ -67,6 +68,7 @@ export async function create<T extends Row>(
 
   await idbPut(table, registro);
   await enqueue(table, "insert", registro.id, registro as Record<string, unknown>);
+  emitLocalChange();
   return registro;
 }
 
@@ -86,6 +88,7 @@ export async function update<T extends Row>(
   // Envia só os campos alterados: se outra pessoa mexeu em campos diferentes
   // do mesmo registro, as duas edições convivem em vez de uma apagar a outra.
   await enqueue(table, "update", id, { ...changes, updated_by: ctx.userId, updated_at: agora });
+  emitLocalChange();
   return atualizado;
 }
 
@@ -96,6 +99,7 @@ export async function remove(table: SyncedTable, ctx: Ctx, id: string): Promise<
   const agora = new Date().toISOString();
   await idbPut(table, { ...atual, deleted_at: agora, updated_by: ctx.userId, updated_at: agora });
   await enqueue(table, "delete", id, { deleted_at: agora });
+  emitLocalChange();
 }
 
 // ---------------------------------------------------------------------------

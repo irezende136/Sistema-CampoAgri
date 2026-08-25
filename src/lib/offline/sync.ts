@@ -11,6 +11,7 @@ import {
   type SyncedTable,
 } from "./idb";
 import { listOutbox, markFailure, removeFromOutbox, type OutboxItem } from "./outbox";
+import { emitLocalChange } from "./events";
 
 type Row = Record<string, unknown> & { id: string; updated_at?: string };
 
@@ -213,6 +214,7 @@ export async function syncNow(organizationId: string): Promise<SyncOutcome> {
     const { enviados, falhas } = await push();
     await pull(organizationId);
     await setLastSyncAt(new Date().toISOString());
+    emitLocalChange();
     return { ok: true, enviados, falhas, fotosEnviadas };
   } catch (e) {
     return {
