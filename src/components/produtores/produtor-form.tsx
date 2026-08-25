@@ -1,24 +1,23 @@
 "use client";
 
-import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import { useFormSubmit } from "@/lib/offline/use-form-submit";
 import { FieldGroup, Input, Textarea } from "@/components/ui/field";
 import type { Database } from "@/types/database";
-import type { ActionState } from "@/lib/actions/auth";
 
 type Produtor = Database["public"]["Tables"]["produtores"]["Row"];
 
 export function ProdutorForm({
   produtor,
-  action,
+  aoSalvar,
 }: {
   produtor?: Produtor;
-  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  aoSalvar: (dados: FormData) => Promise<void>;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const { onSubmit, salvando, erro } = useFormSubmit(aoSalvar);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4">
       <FieldGroup label="Nome do produtor" htmlFor="nome">
         <Input id="nome" name="nome" required defaultValue={produtor?.nome} placeholder="João Pereira" />
       </FieldGroup>
@@ -50,9 +49,9 @@ export function ProdutorForm({
       <FieldGroup label="Observações" htmlFor="observacoes">
         <Textarea id="observacoes" name="observacoes" defaultValue={produtor?.observacoes ?? ""} />
       </FieldGroup>
-      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-        {pending ? "Salvando..." : produtor ? "Salvar alterações" : "Cadastrar produtor"}
+      {erro && <p className="text-sm text-danger">{erro}</p>}
+      <Button type="submit" disabled={salvando} className="w-full sm:w-auto">
+        {salvando ? "Salvando..." : produtor ? "Salvar alterações" : "Cadastrar produtor"}
       </Button>
     </form>
   );

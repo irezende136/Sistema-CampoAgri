@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useFormSubmit } from "@/lib/offline/use-form-submit";
 import { FieldGroup, Input, Select, Textarea } from "@/components/ui/field";
 import { GpsCapture } from "@/components/ui/gps-capture";
 import type { Database } from "@/types/database";
-import type { ActionState } from "@/lib/actions/auth";
 
 type Propriedade = Database["public"]["Tables"]["propriedades"]["Row"];
 
@@ -25,19 +25,19 @@ export function PropriedadeForm({
   propriedade,
   produtores,
   defaultProdutorId,
-  action,
+  aoSalvar,
 }: {
   propriedade?: Propriedade;
   produtores: { id: string; nome: string }[];
   defaultProdutorId?: string;
-  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  aoSalvar: (dados: FormData) => Promise<void>;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const { onSubmit, salvando, erro } = useFormSubmit(aoSalvar);
   const [latitude, setLatitude] = useState(propriedade?.latitude?.toString() ?? "");
   const [longitude, setLongitude] = useState(propriedade?.longitude?.toString() ?? "");
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4">
       <FieldGroup label="Produtor" htmlFor="produtor_id">
         <Select
           id="produtor_id"
@@ -104,9 +104,9 @@ export function PropriedadeForm({
         <Textarea id="observacoes" name="observacoes" defaultValue={propriedade?.observacoes ?? ""} />
       </FieldGroup>
 
-      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-        {pending ? "Salvando..." : propriedade ? "Salvar alterações" : "Cadastrar propriedade"}
+      {erro && <p className="text-sm text-danger">{erro}</p>}
+      <Button type="submit" disabled={salvando} className="w-full sm:w-auto">
+        {salvando ? "Salvando..." : propriedade ? "Salvar alterações" : "Cadastrar propriedade"}
       </Button>
     </form>
   );

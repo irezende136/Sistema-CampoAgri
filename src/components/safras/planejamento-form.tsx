@@ -1,24 +1,23 @@
 "use client";
 
-import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
+import { useFormSubmit } from "@/lib/offline/use-form-submit";
 import { FieldGroup, Input, Textarea } from "@/components/ui/field";
 import type { Database } from "@/types/database";
-import type { ActionState } from "@/lib/actions/auth";
 
 type Planejamento = Database["public"]["Tables"]["planejamento_plantio"]["Row"];
 
 export function PlanejamentoForm({
   planejamento,
-  action,
+  aoSalvar,
 }: {
   planejamento?: Planejamento | null;
-  action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
+  aoSalvar: (dados: FormData) => Promise<void>;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const { onSubmit, salvando, erro } = useFormSubmit(aoSalvar);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FieldGroup label="Cultivar / híbrido" htmlFor="cultivar">
           <Input id="cultivar" name="cultivar" defaultValue={planejamento?.cultivar ?? ""} />
@@ -58,9 +57,9 @@ export function PlanejamentoForm({
       <FieldGroup label="Observações técnicas" htmlFor="observacoes_tecnicas">
         <Textarea id="observacoes_tecnicas" name="observacoes_tecnicas" defaultValue={planejamento?.observacoes_tecnicas ?? ""} />
       </FieldGroup>
-      {state?.error && <p className="text-sm text-danger">{state.error}</p>}
-      <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-        {pending ? "Salvando..." : "Salvar planejamento de plantio"}
+      {erro && <p className="text-sm text-danger">{erro}</p>}
+      <Button type="submit" disabled={salvando} className="w-full sm:w-auto">
+        {salvando ? "Salvando..." : "Salvar planejamento de plantio"}
       </Button>
     </form>
   );

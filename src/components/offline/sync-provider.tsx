@@ -11,6 +11,13 @@ type SyncState = {
   sincronizando: boolean;
   ultimaSync: string | null;
   erro: string | null;
+  /** Falso até a primeira tentativa de sincronizar terminar. Evita mostrar
+   *  "nada cadastrado" antes de sabermos se há dados a baixar. */
+  iniciado: boolean;
+  /** Nunca houve uma sincronização bem-sucedida neste aparelho. */
+  nuncaSincronizou: boolean;
+  /** IndexedDB indisponível (navegação privada, armazenamento bloqueado). */
+  armazenamentoIndisponivel: boolean;
   sincronizar: () => Promise<void>;
   recarregarPendentes: () => Promise<void>;
 };
@@ -38,14 +45,19 @@ export function SyncProvider({
   const [sincronizando, setSincronizando] = useState(false);
   const [ultimaSync, setUltimaSync] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [iniciado, setIniciado] = useState(false);
+  const [armazenamentoIndisponivel, setArmazenamentoIndisponivel] = useState(false);
 
   const emAndamento = useRef(false);
 
   const recarregarPendentes = useCallback(async () => {
     try {
       setPendentes(await countPending());
+      setArmazenamentoIndisponivel(false);
     } catch {
-      // IndexedDB indisponível (navegação privada, por exemplo).
+      // Sem IndexedDB o app não guarda nada localmente — o usuário precisa
+      // saber, senão parece que os dados sumiram.
+      setArmazenamentoIndisponivel(true);
     }
   }, []);
 
@@ -63,6 +75,7 @@ export function SyncProvider({
     } finally {
       emAndamento.current = false;
       setSincronizando(false);
+      setIniciado(true);
     }
   }, [organizationId, recarregarPendentes]);
 
@@ -97,6 +110,9 @@ export function SyncProvider({
         sincronizando,
         ultimaSync,
         erro,
+        iniciado,
+        nuncaSincronizou: iniciado && ultimaSync === null,
+        armazenamentoIndisponivel,
         sincronizar,
         recarregarPendentes,
       }}
