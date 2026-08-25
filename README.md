@@ -151,8 +151,9 @@ ambiente do frontend.
    Variables), iguais às de `.env.local`:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_SITE_URL` (URL pública do deploy, usada no link de confirmação
-     de e-mail — ex: `https://sistema-campoagri.vercel.app`)
+   - `NEXT_PUBLIC_SITE_URL` (opcional — os links de confirmação de e-mail e de
+     redefinição de senha usam o host do próprio pedido; esta variável serve
+     apenas de reserva quando não há contexto de requisição)
 3. Deploy. Todo push na branch de produção gera um novo deploy automaticamente.
 4. No painel do Supabase, em Authentication → URL Configuration, adicione a URL
    do deploy Vercel em *Site URL* e *Redirect URLs* (`/auth/callback`).

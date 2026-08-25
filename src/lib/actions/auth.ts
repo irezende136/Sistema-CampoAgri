@@ -1,10 +1,34 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal/constants";
 
 export type ActionState = { error?: string } | undefined;
+
+/**
+ * URL pública do app, derivada do próprio pedido.
+ *
+ * Depender só de NEXT_PUBLIC_SITE_URL é frágil: se a variável não estiver
+ * configurada no ambiente, o código cai em localhost silenciosamente e os links
+ * de confirmação de e-mail e de redefinição de senha chegam ao usuário
+ * apontando para a máquina dele. Lendo o host do pedido, o link sempre aponta
+ * para o domínio de onde o app foi realmente acessado.
+ */
+async function origemDoApp(): Promise<string> {
+  try {
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    if (host) {
+      const protocolo = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+      return `${protocolo}://${host}`;
+    }
+  } catch {
+    // Fora de um contexto de requisição: cai para a variável de ambiente.
+  }
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+}
 
 export async function signIn(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const email = String(formData.get("email") ?? "").trim();
@@ -34,7 +58,7 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
   if (!termosAceitos) return { error: "É necessário aceitar os Termos de Uso e a Política de Privacidade." };
 
   const supabase = await createClient();
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const origin = await origemDoApp();
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -63,7 +87,7 @@ export async function requestPasswordReset(_prev: ActionState, formData: FormDat
   if (!email) return { error: "Informe seu e-mail." };
 
   const supabase = await createClient();
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const origin = await origemDoApp();
 
   await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/callback?next=/redefinir-senha`,
